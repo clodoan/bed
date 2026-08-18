@@ -100,39 +100,32 @@ final class BedModel: ObservableObject {
             stationIndex = (stationIndex + 1) % Stations.all.count
             tune(to: station)
         case .ai:
-            let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-            if token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                status = .error("Paste a token from replicate.com/account/api-tokens")
-                return
-            }
-            if trimmed.isEmpty {
-                status = .error("Say what you want to hear")
-                return
-            }
-            Task { await generateAndPlay(prompt: trimmed) }
+            guard let prompt = validatedAIPrompt() else { return }
+            Task { await generateAndPlay(prompt: prompt) }
         }
     }
 
     private func playAI() {
-        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            status = .error("Paste a token from replicate.com/account/api-tokens")
-            return
-        }
-
-        if trimmed.isEmpty {
-            status = .error("Say what you want to hear")
-            return
-        }
-
-        if player.hasItem, lastGeneratedPrompt == trimmed, tunedStationURL == nil {
+        guard let prompt = validatedAIPrompt() else { return }
+        if player.hasItem, lastGeneratedPrompt == prompt, tunedStationURL == nil {
             player.play()
             status = .playing
             return
         }
+        Task { await generateAndPlay(prompt: prompt) }
+    }
 
-        Task { await generateAndPlay(prompt: trimmed) }
+    private func validatedAIPrompt() -> String? {
+        if token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            status = .error("Paste a token from replicate.com/account/api-tokens")
+            return nil
+        }
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            status = .error("Say what you want to hear")
+            return nil
+        }
+        return trimmed
     }
 
     private func tune(to station: Station) {
@@ -238,7 +231,7 @@ struct ContentView: View {
         return LCDPanel(lit: model.player.isPlaying || model.status == .making, snow: snow) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(model.player.isPlaying ? "ON" : (model.status == .making ? "REC" : "STBY"))
+                    Text(lcdPower)
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .tracking(1.2)
                         .foregroundStyle(model.player.isPlaying ? BedPalette.phosphor : BedPalette.phosphorDim)
@@ -299,7 +292,7 @@ struct ContentView: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(ChromeButtonStyle(shape: .capsule))
-            .disabled(model.isGenerating && model.mode == .ai)
+            .disabled(aiBusy)
             .accessibilityLabel(model.player.isPlaying ? "Pause" : "Play")
 
             Button(action: model.skipTapped) {
@@ -309,7 +302,7 @@ struct ContentView: View {
                     .contentShape(Circle())
             }
             .buttonStyle(ChromeButtonStyle(shape: .circle))
-            .disabled(model.isGenerating && model.mode == .ai)
+            .disabled(aiBusy)
             .accessibilityLabel(model.mode == .stations ? "Next station" : "Generate again")
         }
     }
@@ -359,6 +352,16 @@ struct ContentView: View {
             .frame(height: 16, alignment: .leading)
             .accessibilityLabel("Replicate token")
         }
+    }
+
+    private var aiBusy: Bool {
+        model.isGenerating && model.mode == .ai
+    }
+
+    private var lcdPower: String {
+        if model.player.isPlaying { return "ON" }
+        if model.status == .making { return "REC" }
+        return "STBY"
     }
 
     private var lcdClock: String {

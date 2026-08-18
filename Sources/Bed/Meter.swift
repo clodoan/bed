@@ -30,12 +30,14 @@ final class AudioMeter: ObservableObject {
     fileprivate let core = AnalyzerCore()
     private var tap: MTAudioProcessingTap?
     private var attachTask: Task<Void, Never>?
+    private var shown = SpectrumFrame.empty
 
     func reset() {
         attachTask?.cancel()
         attachTask = nil
         tap = nil
         core.reset()
+        shown = .empty
     }
 
     func attach(to item: AVPlayerItem) {
@@ -47,13 +49,29 @@ final class AudioMeter: ObservableObject {
 
     func display(playing: Bool, seed: Int, time: TimeInterval) -> SpectrumFrame {
         let captured = core.snapshot()
+        let target: SpectrumFrame
         if captured.live, captured.hasEnergy {
-            return captured
+            target = captured
+        } else if !playing {
+            target = captured.hasEnergy ? captured : .empty
+        } else {
+            target = Self.procedural(seed: seed, time: time, falling: captured)
         }
-        if !playing {
-            return captured.hasEnergy ? captured : .empty
+        return ease(toward: target, playing: playing)
+    }
+
+    private func ease(toward target: SpectrumFrame, playing: Bool) -> SpectrumFrame {
+        let follow: Float = playing ? 0.14 : 0.32
+        guard shown.wave.count == target.wave.count else {
+            shown = target
+            return target
         }
-        return Self.procedural(seed: seed, time: time, falling: captured)
+        var next = target
+        for i in next.wave.indices {
+            next.wave[i] = shown.wave[i] * (1 - follow) + target.wave[i] * follow
+        }
+        shown = next
+        return next
     }
 
     private func installWhenReady(on item: AVPlayerItem) async {
@@ -123,7 +141,7 @@ final class AudioMeter: ObservableObject {
 
         for i in 0..<AnalyzerCore.waveCount {
             let x = Double(i) / Double(max(1, AnalyzerCore.waveCount - 1))
-            wave[i] = Float(sin(x * .pi * 2 + time * (2.15 + drift)) * 0.42)
+            wave[i] = Float(sin(x * .pi * 2 + time * (0.72 + drift * 0.25)) * 0.42)
         }
 
         var peaks = bands
@@ -172,6 +190,7 @@ final class AnalyzerCore: @unchecked Sendable {
 
     func reset() {
         lock.lock()
+        defer { lock.unlock() }
         bands = Array(repeating: 0, count: Self.bandCount)
         peaks = Array(repeating: 0, count: Self.bandCount)
         wave = Array(repeating: 0, count: Self.waveCount)
@@ -180,14 +199,13 @@ final class AnalyzerCore: @unchecked Sendable {
         filled = 0
         lastInput = 0
         agc = 0.08
-        lock.unlock()
     }
 
     func prepare(format: AudioStreamBasicDescription, maxFrames: Int) {
         lock.lock()
+        defer { lock.unlock() }
         self.format = format
         mono = [Float](repeating: 0, count: max(maxFrames, 1))
-        lock.unlock()
     }
 
     func analyze(_ bufferList: UnsafeMutablePointer<AudioBufferList>, frameCount: Int) {
@@ -243,7 +261,7 @@ final class AnalyzerCore: @unchecked Sendable {
         for i in 0..<Self.waveCount {
             let index = min(frames - 1, i * step)
             let sample = max(-1, min(1, mono[index]))
-            nextWave[i] = sample * 0.82 + wave[i] * 0.18
+            nextWave[i] = sample * 0.2 + wave[i] * 0.8
         }
         wave = nextWave
 

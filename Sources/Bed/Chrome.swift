@@ -46,13 +46,8 @@ struct ChassisBackdrop: View {
 private struct Pinstripes: View {
     var body: some View {
         Canvas { context, size in
-            var y: CGFloat = 0.5
-            while y < size.height {
-                var path = Path()
-                path.move(to: CGPoint(x: 0, y: y))
-                path.addLine(to: CGPoint(x: size.width, y: y))
-                context.stroke(path, with: .color(.white.opacity(0.045)), lineWidth: 1)
-                y += 2
+            strokeHatch(&context, size: size, step: 2, from: 0.5, lineWidth: 1) { _ in
+                Color.white.opacity(0.045)
             }
         }
         .allowsHitTesting(false)
@@ -62,7 +57,6 @@ private struct Pinstripes: View {
 enum ChromeShape {
     case circle
     case capsule
-    case rounded
 }
 
 struct ChromeButtonStyle: ButtonStyle {
@@ -99,20 +93,23 @@ private struct ChromeButtonBody: View {
             .foregroundStyle(labelColor)
             .shadow(color: .white.opacity(latched ? 0.08 : 0.28), radius: 0, y: 0.5)
             .shadow(color: .black.opacity(latched ? 0.35 : 0.5), radius: 0, y: latched ? 0 : -0.4)
-            .padding(.horizontal, shape == .circle || shape == .rounded ? 0 : (compact ? 10 : 14))
-            .frame(
-                minWidth: shape == .rounded ? 32 : 0,
-                minHeight: compact ? 22 : 32
-            )
+            .padding(.horizontal, shape == .circle ? 0 : (compact ? 10 : 14))
+            .frame(minHeight: compact ? 22 : 32)
             .background {
                 ChromeSurface(shape: shape, pressed: latched)
             }
-            .scaleEffect(pressed ? 0.97 : hovered ? 1.01 : 1)
+            .scaleEffect(pressScale)
             .offset(y: pressed ? 1 : 0)
             .opacity(isEnabled ? 1 : 0.45)
             .animation(.easeOut(duration: 0.1), value: pressed)
             .animation(.easeOut(duration: 0.16), value: hovered)
             .onHover { hovered = $0 }
+    }
+
+    private var pressScale: CGFloat {
+        if pressed { return 0.97 }
+        if hovered { return 1.01 }
+        return 1
     }
 
     private var labelColor: Color {
@@ -131,8 +128,6 @@ private struct ChromeSurface: View {
                 layers(Circle())
             case .capsule:
                 layers(Capsule())
-            case .rounded:
-                layers(RoundedRectangle(cornerRadius: 9, style: .continuous))
             }
         }
         .shadow(color: .white.opacity(pressed ? 0 : 0.18), radius: 0, y: 0.6)
@@ -239,14 +234,8 @@ private struct ChromeSurface: View {
 private struct BrushedGrain: View {
     var body: some View {
         Canvas { context, size in
-            var y: CGFloat = 0.5
-            while y < size.height {
-                var path = Path()
-                path.move(to: CGPoint(x: 0, y: y))
-                path.addLine(to: CGPoint(x: size.width, y: y))
-                let shade = y.truncatingRemainder(dividingBy: 3) < 1 ? 0.07 : 0.03
-                context.stroke(path, with: .color(.white.opacity(shade)), lineWidth: 0.6)
-                y += 1
+            strokeHatch(&context, size: size, step: 1, from: 0.5, lineWidth: 0.6) { y in
+                Color.white.opacity(y.truncatingRemainder(dividingBy: 3) < 1 ? 0.07 : 0.03)
             }
         }
         .allowsHitTesting(false)
@@ -353,13 +342,8 @@ struct LCDPanel<Content: View>: View {
 private struct Scanlines: View {
     var body: some View {
         Canvas { context, size in
-            var y: CGFloat = 0
-            while y < size.height {
-                var path = Path()
-                path.move(to: CGPoint(x: 0, y: y))
-                path.addLine(to: CGPoint(x: size.width, y: y))
-                context.stroke(path, with: .color(.black.opacity(0.35)), lineWidth: 1)
-                y += 2
+            strokeHatch(&context, size: size, step: 2, from: 0, lineWidth: 1) { _ in
+                Color.black.opacity(0.35)
             }
         }
     }
@@ -537,8 +521,8 @@ struct SourceFooter: View {
     var body: some View {
         HStack(spacing: 5) {
             Text("via")
-            ForEach(Array(sources.enumerated()), id: \.element.id) { index, source in
-                if index > 0 {
+            ForEach(sources) { source in
+                if source.id != sources.first?.id {
                     Text("·")
                         .foregroundStyle(.white.opacity(0.16))
                 }
@@ -563,6 +547,24 @@ struct SourceFooter: View {
             return "\(source.supportLabel) to \(source.name)"
         }
         return "Open \(source.name)"
+    }
+}
+
+private func strokeHatch(
+    _ context: inout GraphicsContext,
+    size: CGSize,
+    step: CGFloat,
+    from start: CGFloat,
+    lineWidth: CGFloat,
+    color: (CGFloat) -> Color
+) {
+    var y = start
+    while y < size.height {
+        var path = Path()
+        path.move(to: CGPoint(x: 0, y: y))
+        path.addLine(to: CGPoint(x: size.width, y: y))
+        context.stroke(path, with: .color(color(y)), lineWidth: lineWidth)
+        y += step
     }
 }
 
