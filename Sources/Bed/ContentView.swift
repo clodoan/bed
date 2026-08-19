@@ -18,6 +18,7 @@ final class BedModel: ObservableObject {
             if !isGenerating {
                 status = player.isPlaying ? .playing : (player.hasItem ? .paused : .idle)
             }
+            refreshNowPlaying()
         }
     }
     @Published private(set) var stationIndex: Int {
@@ -36,6 +37,7 @@ final class BedModel: ObservableObject {
     }
 
     let player = Player()
+    private let nowPlaying = NowPlaying()
     private let generator = Generator()
     private var lastGeneratedPrompt: String?
     private var tunedStationURL: URL?
@@ -69,18 +71,37 @@ final class BedModel: ObservableObject {
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
+        player.$isPlaying
+            .sink { [weak self] playing in
+                self?.playbackChanged(playing)
+            }
+            .store(in: &cancellables)
         player.onItemFailed = { [weak self] reason in
             self?.status = .error(reason)
+            self?.refreshNowPlaying()
         }
+        player.onRouteLost = { [weak self] in
+            self?.status = .paused
+            self?.refreshNowPlaying()
+        }
+        nowPlaying.onPlay = { [weak self] in self?.play() }
+        nowPlaying.onPause = { [weak self] in self?.pause() }
+        nowPlaying.onToggle = { [weak self] in self?.playTapped() }
+        nowPlaying.onNext = { [weak self] in self?.skipTapped() }
+        nowPlaying.onPrevious = { [weak self] in self?.previousTapped() }
+        nowPlaying.bind()
     }
 
     func playTapped() {
         if player.isPlaying {
-            player.pause()
-            status = .paused
-            return
+            pause()
+        } else {
+            play()
         }
+    }
 
+    func play() {
+        guard !aiBusy else { return }
         switch mode {
         case .stations:
             if player.hasItem, tunedStationURL == station.streamURL {
@@ -92,9 +113,19 @@ final class BedModel: ObservableObject {
         case .ai:
             playAI()
         }
+        refreshNowPlaying()
+    }
+
+    func pause() {
+        player.pause()
+        if status == .playing {
+            status = .paused
+        }
+        refreshNowPlaying()
     }
 
     func skipTapped() {
+        guard !aiBusy else { return }
         switch mode {
         case .stations:
             stationIndex = (stationIndex + 1) % Stations.all.count
@@ -103,6 +134,25 @@ final class BedModel: ObservableObject {
             guard let prompt = validatedAIPrompt() else { return }
             Task { await generateAndPlay(prompt: prompt) }
         }
+    }
+
+    func previousTapped() {
+        guard !aiBusy else { return }
+        switch mode {
+        case .stations:
+            stationIndex = (stationIndex + Stations.all.count - 1) % Stations.all.count
+            tune(to: station)
+        case .ai:
+            guard player.hasItem else { return }
+            player.seekToStart()
+            player.play()
+            status = .playing
+            refreshNowPlaying()
+        }
+    }
+
+    private var aiBusy: Bool {
+        isGenerating && mode == .ai
     }
 
     private func playAI() {
@@ -133,6 +183,7 @@ final class BedModel: ObservableObject {
         tunedStationURL = station.streamURL
         player.load(url: station.streamURL)
         status = .playing
+        refreshNowPlaying()
     }
 
     private func generateAndPlay(prompt: String) async {
@@ -147,6 +198,7 @@ final class BedModel: ObservableObject {
                 tunedStationURL = nil
                 player.load(url: url)
                 status = .playing
+                refreshNowPlaying()
             }
         } catch is CancellationError {
             status = .idle
@@ -157,23 +209,68 @@ final class BedModel: ObservableObject {
         }
 
         isGenerating = false
+        refreshNowPlaying()
+    }
+
+    private func playbackChanged(_ playing: Bool) {
+        if playing {
+            if status == .paused || status == .idle {
+                status = .playing
+            }
+        } else if status == .playing {
+            status = .paused
+        }
+        refreshNowPlaying()
+    }
+
+    private func refreshNowPlaying() {
+        switch status {
+        case .idle:
+            if !player.hasItem {
+                nowPlaying.clear()
+                return
+            }
+        case .error:
+            if !player.hasItem {
+                nowPlaying.clear()
+                return
+            }
+        case .making, .playing, .paused:
+            break
+        }
+
+        switch mode {
+        case .stations:
+            nowPlaying.update(
+                title: station.name,
+                artist: station.source.name,
+                subtitle: station.vibe,
+                isPlaying: player.isPlaying,
+                isLive: true
+            )
+        case .ai:
+            let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            nowPlaying.update(
+                title: trimmed.isEmpty ? "AI bed" : trimmed,
+                artist: Sources.replicate.name,
+                subtitle: status == .making ? "making a bed…" : "instrumental",
+                isPlaying: player.isPlaying,
+                isLive: false,
+                duration: player.duration,
+                elapsed: player.elapsed
+            )
+        }
     }
 }
 
 struct ContentView: View {
-    @StateObject private var model = BedModel()
+    @ObservedObject var model: BedModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var snowUntil: Date?
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion && model.status != .making)) { context in
-            let now = context.date.timeIntervalSinceReferenceDate
-            let frame = model.player.meter.display(
-                playing: model.player.isPlaying,
-                seed: model.station.name.hashValue,
-                time: now
-            )
-            radio(now: now, frame: frame, date: context.date)
+        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: snowUntil == nil)) { context in
+            radio(date: context.date)
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)
@@ -183,17 +280,17 @@ struct ContentView: View {
         .background { ChassisBackdrop() }
         .preferredColorScheme(.dark)
         .onChange(of: model.station.name) { _, _ in
-            snowUntil = Date().addingTimeInterval(reduceMotion ? 0 : 0.2)
+            flashSnow(reduceMotion ? 0 : 0.2)
         }
         .onChange(of: model.mode) { _, _ in
-            snowUntil = Date().addingTimeInterval(reduceMotion ? 0 : 0.12)
+            flashSnow(reduceMotion ? 0 : 0.12)
         }
     }
 
-    private func radio(now: TimeInterval, frame: SpectrumFrame, date: Date) -> some View {
+    private func radio(date: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             header()
-            screen(now: now, frame: frame, date: date)
+            screen(date: date)
                 .padding(.top, 14)
             transport()
                 .padding(.top, 16)
@@ -221,7 +318,7 @@ struct ContentView: View {
         }
     }
 
-    private func screen(now: TimeInterval, frame: SpectrumFrame, date: Date) -> some View {
+    private func screen(date: Date) -> some View {
         let snow: Double = {
             guard let snowUntil else { return 0 }
             let remaining = snowUntil.timeIntervalSince(date)
@@ -232,19 +329,25 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(lcdPower)
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .tracking(1.2)
-                        .foregroundStyle(model.player.isPlaying ? BedPalette.phosphor : BedPalette.phosphorDim)
+                        .font(PixelFont.ui(7))
+                        .foregroundStyle(model.player.isPlaying ? BedPalette.mint : BedPalette.creamDim)
                     Text(String(format: "%d/%d", model.stationIndex + 1, Stations.all.count))
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundStyle(BedPalette.phosphorDim)
+                        .font(PixelFont.ui(7))
+                        .foregroundStyle(BedPalette.creamDim)
                         .opacity(model.mode == .stations ? 1 : 0)
                         .accessibilityHidden(model.mode != .stations)
                     Spacer()
                     Text(lcdClock)
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundStyle(BedPalette.phosphor.opacity(0.55))
+                        .font(PixelFont.ui(7))
+                        .foregroundStyle(BedPalette.star.opacity(0.8))
                 }
+
+                DancerView(
+                    playing: model.player.isPlaying,
+                    making: model.status == .making,
+                    reduceMotion: reduceMotion
+                )
+                .padding(.top, 6)
 
                 ZStack(alignment: .topLeading) {
                     stationReadout
@@ -256,20 +359,11 @@ struct ContentView: View {
                         .accessibilityHidden(model.mode != .ai)
                 }
                 .frame(maxWidth: .infinity, minHeight: 36, alignment: .topLeading)
-                .padding(.top, 10)
+                .padding(.top, 8)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: model.mode)
 
-                SpectrumView(
-                    frame: frame,
-                    composing: model.status == .making,
-                    time: now,
-                    reduceMotion: reduceMotion
-                )
-                .padding(.top, 10)
-
                 Text(model.status.line.uppercased())
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .tracking(0.8)
+                    .font(PixelFont.ui(7))
                     .foregroundStyle(statusColor)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -280,26 +374,29 @@ struct ContentView: View {
 
     private func transport() -> some View {
         HStack(alignment: .center, spacing: 8) {
-            Button(action: model.playTapped) {
-                HStack(spacing: 7) {
-                    Image(systemName: model.player.isPlaying ? "pause.fill" : "play.fill")
-                        .offset(x: model.player.isPlaying ? 0 : 0.5)
-                    Text(model.player.isPlaying ? "Pause" : "Play")
-                }
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .frame(maxWidth: .infinity)
-                .frame(height: 32)
-                .contentShape(Capsule())
+            Button(action: model.previousTapped) {
+                Text("<<")
+                    .frame(width: 36, height: 30)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(ChromeButtonStyle(shape: .capsule))
+            .buttonStyle(ChromeButtonStyle(shape: .circle))
+            .disabled(aiBusy)
+            .accessibilityLabel(model.mode == .stations ? "Previous station" : "Restart track")
+
+            Button(action: model.playTapped) {
+                Text(model.player.isPlaying ? "PAUSE" : "PLAY")
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(ChromeButtonStyle(shape: .capsule, isOn: model.player.isPlaying))
             .disabled(aiBusy)
             .accessibilityLabel(model.player.isPlaying ? "Pause" : "Play")
 
             Button(action: model.skipTapped) {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .frame(width: 32, height: 32)
-                    .contentShape(Circle())
+                Text(">>")
+                    .frame(width: 36, height: 30)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(ChromeButtonStyle(shape: .circle))
             .disabled(aiBusy)
@@ -316,8 +413,8 @@ struct ContentView: View {
             )
             .frame(height: 20, alignment: .leading)
             Text(model.station.vibe)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(BedPalette.phosphor.opacity(0.55))
+                .font(PixelFont.ui(6))
+                .foregroundStyle(BedPalette.creamDim)
                 .lineLimit(1)
                 .padding(.top, 3)
                 .frame(height: 16, alignment: .leading)
@@ -366,19 +463,29 @@ struct ContentView: View {
 
     private var lcdClock: String {
         switch model.status {
-        case .playing: return "► LIVE"
-        case .paused: return "❚❚"
-        case .making: return "•••"
+        case .playing: return "LIVE"
+        case .paused: return "HOLD"
+        case .making: return "..."
         case .error: return "ERR"
-        case .idle: return "00:00"
+        case .idle: return "IDLE"
+        }
+    }
+
+    private func flashSnow(_ duration: TimeInterval) {
+        snowUntil = Date().addingTimeInterval(duration)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(Int(duration * 1000) + 20))
+            if let snowUntil, snowUntil <= Date() {
+                self.snowUntil = nil
+            }
         }
     }
 
     private var statusColor: Color {
         switch model.status {
         case .error: return BedPalette.amber
-        case .playing, .making: return BedPalette.phosphor.opacity(0.8)
-        default: return BedPalette.phosphorDim
+        case .playing, .making: return BedPalette.mint
+        default: return BedPalette.creamDim
         }
     }
 }

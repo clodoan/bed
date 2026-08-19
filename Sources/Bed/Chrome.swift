@@ -1,13 +1,62 @@
+import AppKit
+import CoreText
 import SwiftUI
 
 enum BedPalette {
-    static let phosphor = Color(red: 0.52, green: 1.0, blue: 0.46)
-    static let phosphorDim = Color(red: 0.16, green: 0.42, blue: 0.18)
-    static let well = Color(red: 0.015, green: 0.055, blue: 0.02)
+    static let ink = Color(red: 0.13, green: 0.09, blue: 0.20)
+    static let night = Color(red: 0.16, green: 0.11, blue: 0.26)
+    static let well = Color(red: 0.09, green: 0.06, blue: 0.16)
+    static let cream = Color(red: 0.97, green: 0.91, blue: 0.76)
+    static let creamDim = Color(red: 0.97, green: 0.91, blue: 0.76).opacity(0.46)
+    static let coral = Color(red: 0.91, green: 0.49, blue: 0.48)
+    static let lavender = Color(red: 0.70, green: 0.60, blue: 0.86)
+    static let lavenderDeep = Color(red: 0.48, green: 0.38, blue: 0.68)
+    static let star = Color(red: 0.96, green: 0.84, blue: 0.42)
+    static let mint = Color(red: 0.49, green: 0.78, blue: 0.64)
     static let amber = Color(red: 1.0, green: 0.70, blue: 0.22)
-    static let steelHi = Color(red: 0.93, green: 0.93, blue: 0.95)
-    static let steelMid = Color(red: 0.62, green: 0.63, blue: 0.66)
-    static let steelLo = Color(red: 0.28, green: 0.29, blue: 0.32)
+    static let outline = Color(red: 0.07, green: 0.04, blue: 0.12)
+
+    static let phosphor = cream
+    static let phosphorDim = creamDim
+}
+
+enum PixelFont {
+    static func register() {
+        let names = ["PressStart2P-Regular"]
+        for name in names {
+            if let url = PixelAsset.url(name, ext: "ttf") {
+                CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+            }
+        }
+    }
+
+    static func ui(_ size: CGFloat) -> Font {
+        .custom("Press Start 2P", size: size)
+    }
+}
+
+enum PixelAsset {
+    static func url(_ name: String, ext: String = "png") -> URL? {
+        if let url = Bundle.main.url(forResource: name, withExtension: ext) {
+            return url
+        }
+        let file = "\(name).\(ext)"
+        let candidates = [
+            Bundle.main.resourceURL?.appendingPathComponent(file),
+            Bundle.main.resourceURL?.appendingPathComponent("dancer/\(file)"),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Resources/\(file)"),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Resources/dancer/\(file)"),
+        ]
+        return candidates.compactMap { $0 }.first {
+            FileManager.default.fileExists(atPath: $0.path)
+        }
+    }
+
+    static func nsImage(_ name: String) -> NSImage? {
+        url(name).flatMap { NSImage(contentsOf: $0) }
+    }
 }
 
 struct ChassisBackdrop: View {
@@ -15,39 +64,33 @@ struct ChassisBackdrop: View {
 
     var body: some View {
         ZStack {
-            if reduceTransparency {
-                Color(red: 0.16, green: 0.17, blue: 0.19)
-            } else {
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.08),
-                        Color.black.opacity(0.12),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+            BedPalette.night
+            if !reduceTransparency {
+                PixelStars()
+                    .opacity(0.55)
             }
-
-            Pinstripes()
-                .opacity(reduceTransparency ? 0.16 : 0.32)
-
             LinearGradient(
-                colors: [Color.white.opacity(0.22), .clear],
+                colors: [Color.white.opacity(0.06), .clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(maxHeight: 16)
+            .frame(maxHeight: 18)
             .frame(maxHeight: .infinity, alignment: .top)
             .allowsHitTesting(false)
         }
     }
 }
 
-private struct Pinstripes: View {
+private struct PixelStars: View {
     var body: some View {
         Canvas { context, size in
-            strokeHatch(&context, size: size, step: 2, from: 0.5, lineWidth: 1) { _ in
-                Color.white.opacity(0.045)
+            var rng = SeededRandom(seed: 0xBED_5A15)
+            for _ in 0..<48 {
+                let x = CGFloat(rng.next()) * size.width
+                let y = CGFloat(rng.next()) * size.height
+                let on = rng.next() > 0.35
+                let color = on ? BedPalette.cream.opacity(0.35 + rng.next() * 0.4) : BedPalette.lavender.opacity(0.22)
+                context.fill(Path(CGRect(x: x.rounded(), y: y.rounded(), width: 2, height: 2)), with: .color(color))
             }
         }
         .allowsHitTesting(false)
@@ -65,7 +108,7 @@ struct ChromeButtonStyle: ButtonStyle {
     var compact: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
-        ChromeButtonBody(
+        PixelButtonBody(
             configuration: configuration,
             shape: shape,
             isOn: isOn,
@@ -75,7 +118,7 @@ struct ChromeButtonStyle: ButtonStyle {
     }
 }
 
-private struct ChromeButtonBody: View {
+private struct PixelButtonBody: View {
     var configuration: ButtonStyle.Configuration
     var shape: ChromeShape
     var isOn: Bool
@@ -89,156 +132,50 @@ private struct ChromeButtonBody: View {
 
     var body: some View {
         configuration.label
-            .font(.system(size: compact ? 10 : 12, weight: .bold, design: .rounded))
-            .foregroundStyle(labelColor)
-            .shadow(color: .white.opacity(latched ? 0.08 : 0.28), radius: 0, y: 0.5)
-            .shadow(color: .black.opacity(latched ? 0.35 : 0.5), radius: 0, y: latched ? 0 : -0.4)
-            .padding(.horizontal, shape == .circle ? 0 : (compact ? 10 : 14))
-            .frame(minHeight: compact ? 22 : 32)
+            .font(PixelFont.ui(compact ? 7 : 9))
+            .foregroundStyle(BedPalette.ink)
+            .padding(.horizontal, shape == .circle ? 0 : (compact ? 8 : 10))
+            .frame(minHeight: compact ? 22 : 30)
             .background {
-                ChromeSurface(shape: shape, pressed: latched)
+                PixelBevel(latched: latched, fill: fill)
             }
-            .scaleEffect(pressScale)
-            .offset(y: pressed ? 1 : 0)
-            .opacity(isEnabled ? 1 : 0.45)
-            .animation(.easeOut(duration: 0.1), value: pressed)
-            .animation(.easeOut(duration: 0.16), value: hovered)
+            .offset(x: latched ? 1 : 0, y: latched ? 1 : 0)
+            .opacity(isEnabled ? 1 : 0.42)
+            .animation(.easeOut(duration: 0.08), value: pressed)
             .onHover { hovered = $0 }
     }
 
-    private var pressScale: CGFloat {
-        if pressed { return 0.97 }
-        if hovered { return 1.01 }
-        return 1
-    }
-
-    private var labelColor: Color {
-        Color(red: 0.12, green: 0.12, blue: 0.14).opacity(latched ? 0.62 : 0.86)
+    private var fill: Color {
+        if isOn { return BedPalette.mint }
+        if hovered && !latched { return BedPalette.cream }
+        return BedPalette.lavender
     }
 }
 
-private struct ChromeSurface: View {
-    var shape: ChromeShape
-    var pressed: Bool
+private struct PixelBevel: View {
+    var latched: Bool
+    var fill: Color
 
     var body: some View {
-        Group {
-            switch shape {
-            case .circle:
-                layers(Circle())
-            case .capsule:
-                layers(Capsule())
-            }
+        ZStack {
+            Rectangle()
+                .fill(BedPalette.outline)
+                .offset(x: latched ? 0 : 2, y: latched ? 0 : 2)
+            Rectangle().fill(fill)
+            Rectangle().stroke(BedPalette.outline, lineWidth: 2)
+            Rectangle()
+                .fill(Color.white.opacity(latched ? 0.1 : 0.38))
+                .frame(height: 2)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .padding(.horizontal, 2)
+                .padding(.top, 2)
+            Rectangle()
+                .fill(Color.black.opacity(latched ? 0.18 : 0.22))
+                .frame(height: 2)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .padding(.horizontal, 2)
+                .padding(.bottom, 2)
         }
-        .shadow(color: .white.opacity(pressed ? 0 : 0.18), radius: 0, y: 0.6)
-        .shadow(color: .black.opacity(pressed ? 0.28 : 0.5), radius: pressed ? 0.6 : 2.2, y: pressed ? 0.6 : 2)
-    }
-
-    private func layers<S: InsettableShape>(_ metal: S) -> some View {
-        let rim = pressed ? 1.8 : 2.3
-        return ZStack {
-            metal.fill(chamferGradient)
-
-            metal
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(pressed ? 0.35 : 0.9),
-                            Color.black.opacity(pressed ? 0.2 : 0.45),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
-
-            metal
-                .fill(faceGradient)
-                .padding(rim)
-                .overlay {
-                    metal
-                        .strokeBorder(innerWell, lineWidth: 0.8)
-                        .padding(rim)
-                }
-
-            metal
-                .fill(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(pressed ? 0.1 : 0.5), location: 0),
-                            .init(color: .white.opacity(0.08), location: 0.32),
-                            .init(color: .clear, location: 0.5),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .padding(rim + 0.5)
-                .mask(alignment: .top) {
-                    metal.padding(.bottom, shape == .circle ? 18 : 16)
-                }
-
-            BrushedGrain()
-                .opacity(pressed ? 0.16 : 0.24)
-                .padding(rim)
-                .clipShape(metal)
-
-            metal.stroke(Color.black.opacity(0.62), lineWidth: 0.7)
-        }
-    }
-
-    private var faceGradient: LinearGradient {
-        LinearGradient(
-            stops: pressed
-                ? [
-                    .init(color: Color(red: 0.58, green: 0.59, blue: 0.62), location: 0),
-                    .init(color: Color(red: 0.48, green: 0.49, blue: 0.52), location: 0.36),
-                    .init(color: Color(red: 0.62, green: 0.63, blue: 0.66), location: 0.7),
-                    .init(color: Color(red: 0.74, green: 0.75, blue: 0.78), location: 1),
-                ]
-                : [
-                    .init(color: BedPalette.steelHi, location: 0),
-                    .init(color: Color(red: 0.70, green: 0.71, blue: 0.74), location: 0.34),
-                    .init(color: BedPalette.steelMid, location: 0.72),
-                    .init(color: BedPalette.steelLo, location: 1),
-                ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-
-    private var chamferGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                Color.white.opacity(pressed ? 0.55 : 1),
-                Color(red: 0.72, green: 0.73, blue: 0.76),
-                Color(red: 0.22, green: 0.23, blue: 0.26),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
-    private var innerWell: LinearGradient {
-        LinearGradient(
-            colors: [
-                Color.black.opacity(pressed ? 0.28 : 0.55),
-                Color.white.opacity(pressed ? 0.18 : 0.1),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-}
-
-private struct BrushedGrain: View {
-    var body: some View {
-        Canvas { context, size in
-            strokeHatch(&context, size: size, step: 1, from: 0.5, lineWidth: 0.6) { y in
-                Color.white.opacity(y.truncatingRemainder(dividingBy: 3) < 1 ? 0.07 : 0.03)
-            }
-        }
-        .allowsHitTesting(false)
     }
 }
 
@@ -256,10 +193,8 @@ struct ModeTab: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(0.5)
                 .textCase(.uppercase)
-                .frame(minWidth: 64)
+                .frame(minWidth: 72)
         }
         .buttonStyle(ChromeButtonStyle(isOn: selected, compact: true))
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -273,94 +208,62 @@ struct LCDPanel<Content: View>: View {
 
     var body: some View {
         content()
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
             .background { well }
-            .overlay { glass }
-            .shadow(color: BedPalette.phosphor.opacity(lit ? 0.18 : 0.04), radius: lit ? 10 : 2)
+            .overlay { frame }
     }
 
     private var well: some View {
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(BedPalette.well)
-            .overlay {
-                if lit {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(BedPalette.phosphor.opacity(0.06))
-                        .blur(radius: 6)
-                }
+        ZStack {
+            Rectangle().fill(BedPalette.outline)
+            Rectangle()
+                .fill(BedPalette.well)
+                .padding(3)
+            if lit {
+                Rectangle()
+                    .fill(BedPalette.lavender.opacity(0.08))
+                    .padding(3)
             }
-    }
-
-    private var glass: some View {
-        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
-        return ZStack {
             if snow > 0 {
-                LCDSnow()
+                PixelSnow()
                     .opacity(snow)
-                    .clipShape(shape)
+                    .padding(3)
                     .allowsHitTesting(false)
             }
-
-            Scanlines()
-                .opacity(0.08)
-                .clipShape(shape)
-                .allowsHitTesting(false)
-
-            shape.fill(
-                LinearGradient(
-                    colors: [Color.white.opacity(0.10), .clear, .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .allowsHitTesting(false)
-
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.75),
-                        Color.white.opacity(0.08),
-                        Color.black.opacity(0.55),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ),
-                lineWidth: 1
-            )
-
-            shape
-                .stroke(Color.black.opacity(0.5), lineWidth: 1)
-                .blur(radius: 0.6)
-                .mask(shape.padding(-1))
-                .allowsHitTesting(false)
         }
+    }
+
+    private var frame: some View {
+        ZStack {
+            Rectangle()
+                .stroke(BedPalette.outline, lineWidth: 3)
+            Rectangle()
+                .stroke(BedPalette.lavenderDeep.opacity(0.9), lineWidth: 2)
+                .padding(3)
+            Rectangle()
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                .padding(5)
+                .mask(alignment: .topLeading) {
+                    Rectangle().padding(.bottom, 28).padding(.trailing, 40)
+                }
+        }
+        .allowsHitTesting(false)
     }
 }
 
-private struct Scanlines: View {
+private struct PixelSnow: View {
     var body: some View {
-        Canvas { context, size in
-            strokeHatch(&context, size: size, step: 2, from: 0, lineWidth: 1) { _ in
-                Color.black.opacity(0.35)
-            }
-        }
-    }
-}
-
-private struct LCDSnow: View {
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 24)) { timeline in
+        TimelineView(.animation(minimumInterval: 1 / 16)) { timeline in
             Canvas { context, size in
-                var generator = SeededRandom(seed: UInt64(timeline.date.timeIntervalSinceReferenceDate * 48))
-                for _ in 0..<220 {
-                    let x = CGFloat(generator.next()) * size.width
-                    let y = CGFloat(generator.next()) * size.height
-                    let bright = generator.next()
+                var generator = SeededRandom(seed: UInt64(timeline.date.timeIntervalSinceReferenceDate * 32))
+                for _ in 0..<80 {
+                    let x = (CGFloat(generator.next()) * size.width).rounded()
+                    let y = (CGFloat(generator.next()) * size.height).rounded()
                     context.fill(
-                        Path(CGRect(x: x, y: y, width: 1.2, height: 1.2)),
-                        with: .color(BedPalette.phosphor.opacity(0.15 + bright * 0.55))
+                        Path(CGRect(x: x, y: y, width: 2, height: 2)),
+                        with: .color(BedPalette.cream.opacity(0.18 + generator.next() * 0.45))
                     )
                 }
             }
@@ -368,108 +271,62 @@ private struct LCDSnow: View {
     }
 }
 
-struct SpectrumView: View {
-    var frame: SpectrumFrame
-    var composing: Bool
-    var time: TimeInterval
+/// Original pajama sprite. Proportions follow the Life Be pixel-art character tutorial
+/// (equal head and body height, 3/4 view, 1px outline):
+/// https://lifebe.com.au/artistic/pixel-art-tutorial-new-female-character-part-1/
+struct DancerView: View {
+    var playing: Bool
+    var making: Bool
     var reduceMotion: Bool
 
     var body: some View {
-        Canvas { context, size in
-            if composing {
-                drawTuner(context: context, size: size)
-                return
+        TimelineView(.animation(minimumInterval: 1.0 / 5.0, paused: reduceMotion || (!playing && !making))) { context in
+            ZStack {
+                Ellipse()
+                    .fill(BedPalette.outline.opacity(0.35))
+                    .frame(width: 72, height: 10)
+                    .offset(y: 62)
+                PixelImage(frameName(at: context.date))
+                    .frame(height: 148)
             }
-            drawWave(context: context, size: size)
+            .frame(maxWidth: .infinity, minHeight: 156)
         }
-        .frame(height: 28)
-        .accessibilityHidden(true)
+        .accessibilityLabel(playing ? "Character dancing" : (making ? "Character waiting" : "Character idle"))
     }
 
-    private func drawTuner(context: GraphicsContext, size: CGSize) {
-        let x: CGFloat
+    private func frameName(at date: Date) -> String {
         if reduceMotion {
-            x = size.width * 0.5
+            return playing || making ? "dance-01" : "idle"
+        }
+        if making {
+            return Int(date.timeIntervalSinceReferenceDate * 2) % 2 == 0 ? "idle" : "dance-03"
+        }
+        if playing {
+            let frames = (1...16).map { String(format: "dance-%02d", $0) }
+            let index = Int(date.timeIntervalSinceReferenceDate * 5) % frames.count
+            return frames[index]
+        }
+        return "idle"
+    }
+}
+
+struct PixelImage: View {
+    var name: String
+
+    init(_ name: String) {
+        self.name = name
+    }
+
+    var body: some View {
+        if let image = PixelAsset.nsImage(name) {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.none)
+                .scaledToFit()
         } else {
-            let cycle = (sin(time * .pi * 1.4) + 1) * 0.5
-            x = 6 + cycle * max(0, size.width - 12)
+            Text("🛏️")
+                .font(.system(size: 44))
         }
-        var sweep = Path()
-        sweep.addRoundedRect(
-            in: CGRect(x: x - 4, y: size.height * 0.28, width: 8, height: size.height * 0.44),
-            cornerSize: CGSize(width: 2, height: 2)
-        )
-        context.fill(
-            sweep,
-            with: .linearGradient(
-                Gradient(colors: [
-                    BedPalette.phosphor.opacity(0.04),
-                    BedPalette.phosphor.opacity(0.7),
-                    BedPalette.phosphor.opacity(0.04),
-                ]),
-                startPoint: CGPoint(x: x - 7, y: 0),
-                endPoint: CGPoint(x: x + 7, y: 0)
-            )
-        )
-    }
-
-    private func drawWave(context: GraphicsContext, size: CGSize) {
-        let samples = smoothed(frame.wave)
-        guard samples.count > 1, frame.hasEnergy else { return }
-
-        let mid = size.height * 0.5
-        var hairline = Path()
-        hairline.move(to: CGPoint(x: 0, y: mid))
-        hairline.addLine(to: CGPoint(x: size.width, y: mid))
-        context.stroke(hairline, with: .color(BedPalette.phosphor.opacity(0.1)), lineWidth: 0.5)
-
-        let path = wavePath(samples, size: size)
-        var fill = path
-        fill.addLine(to: CGPoint(x: size.width, y: mid))
-        fill.addLine(to: CGPoint(x: 0, y: mid))
-        fill.closeSubpath()
-        context.fill(fill, with: .color(BedPalette.phosphor.opacity(0.07)))
-        context.stroke(path, with: .color(BedPalette.phosphor.opacity(0.58)), lineWidth: 1)
-    }
-
-    private func smoothed(_ wave: [Float]) -> [Float] {
-        guard wave.count > 2 else { return wave }
-        var out = [Float](repeating: 0, count: wave.count)
-        out[0] = wave[0]
-        out[wave.count - 1] = wave[wave.count - 1]
-        for i in 1..<(wave.count - 1) {
-            out[i] = (wave[i - 1] + wave[i] * 2 + wave[i + 1]) * 0.25
-        }
-        return out
-    }
-
-    private func wavePath(_ samples: [Float], size: CGSize) -> Path {
-        let mid = size.height * 0.5
-        let peak = max(0.14, samples.map { abs($0) }.max() ?? 0.14)
-        let amp = size.height * 0.4
-        let last = samples.count - 1
-        let points: [CGPoint] = samples.enumerated().map { index, sample in
-            CGPoint(
-                x: size.width * CGFloat(index) / CGFloat(last),
-                y: mid - CGFloat(sample / peak) * amp
-            )
-        }
-
-        var path = Path()
-        path.move(to: points[0])
-        for i in 1..<points.count {
-            let midPoint = CGPoint(
-                x: (points[i - 1].x + points[i].x) * 0.5,
-                y: (points[i - 1].y + points[i].y) * 0.5
-            )
-            if i == 1 {
-                path.addLine(to: midPoint)
-            } else {
-                path.addQuadCurve(to: midPoint, control: points[i - 1])
-            }
-        }
-        path.addLine(to: points[points.count - 1])
-        return path
     }
 }
 
@@ -480,11 +337,10 @@ struct MarqueeText: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 15, weight: .semibold, design: .monospaced))
-            .foregroundStyle(BedPalette.phosphor)
-            .shadow(color: BedPalette.phosphor.opacity(0.35), radius: 3)
+            .font(PixelFont.ui(9))
+            .foregroundStyle(BedPalette.cream)
             .lineLimit(1)
-            .minimumScaleFactor(reduceMotion || !running ? 0.75 : 1)
+            .minimumScaleFactor(reduceMotion || !running ? 0.7 : 1)
             .modifier(MarqueeShift(text: text, running: running && !reduceMotion))
     }
 }
@@ -494,21 +350,45 @@ private struct MarqueeShift: ViewModifier {
     var running: Bool
 
     func body(content: Content) -> some View {
-        if !running || text.count < 18 {
+        if !running || text.isEmpty {
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
-                let width = CGFloat(text.count) * 8.2
-                let travel = max(40, width)
-                let period = max(6, Double(text.count) * 0.28)
-                let t = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
-                content
-                    .offset(x: -CGFloat(t) * travel)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .clipped()
+            GeometryReader { geo in
+                TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
+                    content
+                        .fixedSize(horizontal: true, vertical: false)
+                        .offset(x: offset(at: timeline.date, container: geo.size.width))
+                        .frame(width: geo.size.width, alignment: .leading)
+                }
             }
+            .clipped()
         }
+    }
+
+    private func offset(at date: Date, container: CGFloat) -> CGFloat {
+        let textWidth = measuredWidth()
+        let hold = 1.4
+        let leave = textWidth + 12
+        let enter = container + 12
+        let travel = max(80, leave + enter)
+        let moveDuration = Double(travel) / 34
+        let period = hold + moveDuration
+        let elapsed = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period)
+        if elapsed < hold {
+            return 0
+        }
+        let distance = CGFloat((elapsed - hold) / moveDuration) * travel
+        if distance <= leave {
+            return -distance
+        }
+        return enter - (distance - leave)
+    }
+
+    private func measuredWidth() -> CGFloat {
+        let font = NSFont(name: "Press Start 2P", size: 9)
+            ?? NSFont.monospacedSystemFont(ofSize: 9, weight: .regular)
+        return ceil((text as NSString).size(withAttributes: [.font: font]).width)
     }
 }
 
@@ -520,23 +400,23 @@ struct SourceFooter: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            Text("via")
+            Text("VIA")
             ForEach(sources) { source in
                 if source.id != sources.first?.id {
-                    Text("·")
-                        .foregroundStyle(.white.opacity(0.16))
+                    Text("/")
+                        .foregroundStyle(BedPalette.cream.opacity(0.18))
                 }
-                Button(source.name) {
+                Button(source.name.uppercased()) {
                     openURL(source.supportURL ?? source.homeURL)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white.opacity(source.id == current.id ? 0.4 : 0.26))
+                .foregroundStyle(BedPalette.cream.opacity(source.id == current.id ? 0.55 : 0.28))
                 .accessibilityLabel(accessName(source))
                 .accessibilityHint(source.blurb)
             }
         }
-        .font(.system(size: 10, weight: .medium, design: .rounded))
-        .foregroundStyle(.white.opacity(0.26))
+        .font(PixelFont.ui(6))
+        .foregroundStyle(BedPalette.cream.opacity(0.28))
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sources")
@@ -547,24 +427,6 @@ struct SourceFooter: View {
             return "\(source.supportLabel) to \(source.name)"
         }
         return "Open \(source.name)"
-    }
-}
-
-private func strokeHatch(
-    _ context: inout GraphicsContext,
-    size: CGSize,
-    step: CGFloat,
-    from start: CGFloat,
-    lineWidth: CGFloat,
-    color: (CGFloat) -> Color
-) {
-    var y = start
-    while y < size.height {
-        var path = Path()
-        path.move(to: CGPoint(x: 0, y: y))
-        path.addLine(to: CGPoint(x: size.width, y: y))
-        context.stroke(path, with: .color(color(y)), lineWidth: lineWidth)
-        y += step
     }
 }
 
