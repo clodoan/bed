@@ -10,13 +10,22 @@ struct Source: Equatable, Identifiable {
 }
 
 enum Sources {
-    static let somaFM = Source(
-        id: "somafm",
-        name: "SomaFM",
+    static let radioParadise = Source(
+        id: "radioparadise",
+        name: "Radio Paradise",
         blurb: "Listener-supported, commercial-free radio.",
-        homeURL: URL(string: "https://somafm.com")!,
-        supportURL: URL(string: "https://somafm.com/support/")!,
+        homeURL: URL(string: "https://radioparadise.com")!,
+        supportURL: URL(string: "https://radioparadise.com/donate")!,
         supportLabel: "Donate"
+    )
+
+    static let nts = Source(
+        id: "nts",
+        name: "NTS",
+        blurb: "Independent radio from London.",
+        homeURL: URL(string: "https://www.nts.live")!,
+        supportURL: URL(string: "https://www.nts.live/supporters")!,
+        supportLabel: "Support"
     )
 
     static let nightride = Source(
@@ -30,11 +39,7 @@ enum Sources {
 
     static var catalog: [Source] {
         var seen = Set<String>()
-        var list: [Source] = []
-        for station in Stations.all where seen.insert(station.source.id).inserted {
-            list.append(station.source)
-        }
-        return list
+        return Stations.all.map(\.source).filter { seen.insert($0.id).inserted }
     }
 }
 
@@ -46,36 +51,22 @@ struct Station: Equatable {
 }
 
 enum Stations {
+    private static let catalogVersion = 2
+    private static let catalogVersionKey = "stationCatalogVersion"
+    static let indexDefaultsKey = "stationIndex"
+
     static let all: [Station] = [
         Station(
-            name: "Beat Blender",
-            vibe: "deep house & downtempo",
-            streamURL: URL(string: "https://ice2.somafm.com/beatblender-128-mp3")!,
-            source: Sources.somaFM
+            name: "Mellow Mix",
+            vibe: "downtempo, mellow, late night",
+            streamURL: URL(string: "https://stream.radioparadise.com/mellow-320")!,
+            source: Sources.radioParadise
         ),
         Station(
-            name: "The Trip",
-            vibe: "progressive house & trance",
-            streamURL: URL(string: "https://ice2.somafm.com/thetrip-128-mp3")!,
-            source: Sources.somaFM
-        ),
-        Station(
-            name: "Groove Salad",
-            vibe: "ambient downtempo chill",
-            streamURL: URL(string: "https://ice2.somafm.com/groovesalad-256-mp3")!,
-            source: Sources.somaFM
-        ),
-        Station(
-            name: "Fluid",
-            vibe: "future soul & liquid beats",
-            streamURL: URL(string: "https://ice2.somafm.com/fluid-128-mp3")!,
-            source: Sources.somaFM
-        ),
-        Station(
-            name: "Illinois Street Lounge",
-            vibe: "retro cocktail lounge",
-            streamURL: URL(string: "https://ice2.somafm.com/illstreet-128-mp3")!,
-            source: Sources.somaFM
+            name: "Poolside",
+            vibe: "balearic, boogie, lounge",
+            streamURL: URL(string: "https://stream-mixtape-geo.ntslive.net/mixtape4")!,
+            source: Sources.nts
         ),
         Station(
             name: "Nightride",
@@ -84,4 +75,14 @@ enum Stations {
             source: Sources.nightride
         ),
     ]
+
+    static func loadSavedIndex(from defaults: UserDefaults = .standard) -> Int {
+        if defaults.integer(forKey: catalogVersionKey) != catalogVersion {
+            defaults.set(catalogVersion, forKey: catalogVersionKey)
+            return 0
+        }
+        let saved = defaults.integer(forKey: indexDefaultsKey)
+        guard all.indices.contains(saved) else { return 0 }
+        return saved
+    }
 }

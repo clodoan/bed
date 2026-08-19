@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 final class BedModel: ObservableObject {
     @Published private(set) var stationIndex: Int {
-        didSet { UserDefaults.standard.set(stationIndex, forKey: "stationIndex") }
+        didSet { UserDefaults.standard.set(stationIndex, forKey: Stations.indexDefaultsKey) }
     }
     @Published var status: Status = .idle
 
@@ -32,8 +32,7 @@ final class BedModel: ObservableObject {
     }
 
     init() {
-        let savedIndex = UserDefaults.standard.integer(forKey: "stationIndex")
-        stationIndex = Stations.all.indices.contains(savedIndex) ? savedIndex : 0
+        stationIndex = Stations.loadSavedIndex()
         player.objectWillChange
             .sink { [weak self] _ in
                 self?.objectWillChange.send()

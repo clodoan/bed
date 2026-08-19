@@ -6,7 +6,7 @@
 
 <p align="center">
   Late-night radio in the Mac menu bar.<br>
-  SomaFM deep house, lounge, and downtempo — plus Nightride synthwave.
+  Radio Paradise mellow, NTS Poolside, Nightride synthwave.
 </p>
 
 <p align="center">
@@ -17,8 +17,10 @@
   <img src="Resources/night-desk.png" width="720" alt="Night bedroom, someone at a desk, computer glow">
 </p>
 
-No account. No API key. Skip cycles stations. The stations are listener-supported —
-please [donate to SomaFM](https://somafm.com/support/) and
+No account. No API key. Play starts on Mellow Mix. Skip cycles stations.
+The stations are listener-supported — please
+[donate to Radio Paradise](https://radioparadise.com/donate),
+[support NTS](https://www.nts.live/supporters), and
 [support Nightride on Patreon](https://www.patreon.com/nightridefm).
 
 ## Install
@@ -34,12 +36,9 @@ Look for the bed in the menu bar.
 
 ## Stations
 
-- Beat Blender — deep house & downtempo
-- The Trip — progressive house & trance
-- Groove Salad — ambient downtempo chill
-- Fluid — future soul & liquid beats
-- Illinois Street Lounge — retro cocktail lounge
-- Nightride — synthwave
+- Mellow Mix — downtempo, mellow, late night (Radio Paradise)
+- Poolside — balearic, boogie, lounge (NTS)
+- Nightride — synthwave (Nightride FM)
 
 ## Build from source
 
