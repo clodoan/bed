@@ -28,24 +28,11 @@ enum Sources {
         supportLabel: "Patreon"
     )
 
-    static let replicate = Source(
-        id: "replicate",
-        name: "Replicate",
-        blurb: "Stable Audio 2.5 generates the AI beds.",
-        homeURL: URL(string: "https://replicate.com/stability-ai/stable-audio-2.5")!,
-        supportURL: nil,
-        supportLabel: "Visit"
-    )
-
-    /// Unique sources in catalog order, then the AI provider.
     static var catalog: [Source] {
         var seen = Set<String>()
         var list: [Source] = []
         for station in Stations.all where seen.insert(station.source.id).inserted {
             list.append(station.source)
-        }
-        if seen.insert(replicate.id).inserted {
-            list.append(replicate)
         }
         return list
     }

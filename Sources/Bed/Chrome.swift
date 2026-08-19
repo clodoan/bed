@@ -3,18 +3,17 @@ import CoreText
 import SwiftUI
 
 enum BedPalette {
-    static let ink = Color(red: 0.13, green: 0.09, blue: 0.20)
-    static let night = Color(red: 0.16, green: 0.11, blue: 0.26)
-    static let well = Color(red: 0.09, green: 0.06, blue: 0.16)
-    static let cream = Color(red: 0.97, green: 0.91, blue: 0.76)
-    static let creamDim = Color(red: 0.97, green: 0.91, blue: 0.76).opacity(0.46)
-    static let coral = Color(red: 0.91, green: 0.49, blue: 0.48)
-    static let lavender = Color(red: 0.70, green: 0.60, blue: 0.86)
-    static let lavenderDeep = Color(red: 0.48, green: 0.38, blue: 0.68)
-    static let star = Color(red: 0.96, green: 0.84, blue: 0.42)
-    static let mint = Color(red: 0.49, green: 0.78, blue: 0.64)
-    static let amber = Color(red: 1.0, green: 0.70, blue: 0.22)
-    static let outline = Color(red: 0.07, green: 0.04, blue: 0.12)
+    static let ink = Color(red: 0.10, green: 0.07, blue: 0.05)
+    static let night = Color(red: 0.12, green: 0.10, blue: 0.09)
+    static let well = Color(red: 0.08, green: 0.07, blue: 0.06)
+    static let cream = Color(red: 0.93, green: 0.86, blue: 0.72)
+    static let creamDim = Color(red: 0.93, green: 0.86, blue: 0.72).opacity(0.48)
+    static let walnut = Color(red: 0.52, green: 0.40, blue: 0.30)
+    static let walnutDeep = Color(red: 0.32, green: 0.24, blue: 0.18)
+    static let lamp = Color(red: 0.88, green: 0.64, blue: 0.32)
+    static let glow = Color(red: 0.78, green: 0.88, blue: 0.94)
+    static let amber = Color(red: 0.92, green: 0.58, blue: 0.28)
+    static let outline = Color(red: 0.06, green: 0.04, blue: 0.03)
 
     static let phosphor = cream
     static let phosphorDim = creamDim
@@ -66,11 +65,11 @@ struct ChassisBackdrop: View {
         ZStack {
             BedPalette.night
             if !reduceTransparency {
-                PixelStars()
-                    .opacity(0.55)
+                LampDust()
+                    .opacity(0.4)
             }
             LinearGradient(
-                colors: [Color.white.opacity(0.06), .clear],
+                colors: [BedPalette.lamp.opacity(0.08), .clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -81,16 +80,18 @@ struct ChassisBackdrop: View {
     }
 }
 
-private struct PixelStars: View {
+private struct LampDust: View {
     var body: some View {
         Canvas { context, size in
             var rng = SeededRandom(seed: 0xBED_5A15)
-            for _ in 0..<48 {
+            for _ in 0..<28 {
                 let x = CGFloat(rng.next()) * size.width
                 let y = CGFloat(rng.next()) * size.height
-                let on = rng.next() > 0.35
-                let color = on ? BedPalette.cream.opacity(0.35 + rng.next() * 0.4) : BedPalette.lavender.opacity(0.22)
-                context.fill(Path(CGRect(x: x.rounded(), y: y.rounded(), width: 2, height: 2)), with: .color(color))
+                let warm = rng.next() > 0.45
+                let color = warm
+                    ? BedPalette.lamp.opacity(0.12 + rng.next() * 0.22)
+                    : BedPalette.cream.opacity(0.08 + rng.next() * 0.16)
+                context.fill(Path(CGRect(x: x.rounded(), y: y.rounded(), width: 1, height: 1)), with: .color(color))
             }
         }
         .allowsHitTesting(false)
@@ -146,9 +147,9 @@ private struct PixelButtonBody: View {
     }
 
     private var fill: Color {
-        if isOn { return BedPalette.mint }
+        if isOn { return BedPalette.lamp }
         if hovered && !latched { return BedPalette.cream }
-        return BedPalette.lavender
+        return BedPalette.walnut
     }
 }
 
@@ -164,7 +165,7 @@ private struct PixelBevel: View {
             Rectangle().fill(fill)
             Rectangle().stroke(BedPalette.outline, lineWidth: 2)
             Rectangle()
-                .fill(Color.white.opacity(latched ? 0.1 : 0.38))
+                .fill(BedPalette.cream.opacity(latched ? 0.08 : 0.22))
                 .frame(height: 2)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, 2)
@@ -204,6 +205,7 @@ struct ModeTab: View {
 struct LCDPanel<Content: View>: View {
     var lit: Bool
     var snow: Double
+    var backdrop: String? = nil
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -218,13 +220,19 @@ struct LCDPanel<Content: View>: View {
     private var well: some View {
         ZStack {
             Rectangle().fill(BedPalette.outline)
-            Rectangle()
-                .fill(BedPalette.well)
-                .padding(3)
-            if lit {
-                Rectangle()
-                    .fill(BedPalette.lavender.opacity(0.08))
+            if let backdrop {
+                SceneBackdrop(name: backdrop, dim: lit ? 0.08 : 0.18)
                     .padding(3)
+                    .clipped()
+            } else {
+                Rectangle()
+                    .fill(BedPalette.well)
+                    .padding(3)
+                if lit {
+                    Rectangle()
+                        .fill(BedPalette.glow.opacity(0.08))
+                        .padding(3)
+                }
             }
             if snow > 0 {
                 PixelSnow()
@@ -240,10 +248,10 @@ struct LCDPanel<Content: View>: View {
             Rectangle()
                 .stroke(BedPalette.outline, lineWidth: 3)
             Rectangle()
-                .stroke(BedPalette.lavenderDeep.opacity(0.9), lineWidth: 2)
+                .stroke(BedPalette.walnutDeep.opacity(0.95), lineWidth: 2)
                 .padding(3)
             Rectangle()
-                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                .stroke(BedPalette.lamp.opacity(0.22), lineWidth: 1)
                 .padding(5)
                 .mask(alignment: .topLeading) {
                     Rectangle().padding(.bottom, 28).padding(.trailing, 40)
@@ -263,7 +271,7 @@ private struct PixelSnow: View {
                     let y = (CGFloat(generator.next()) * size.height).rounded()
                     context.fill(
                         Path(CGRect(x: x, y: y, width: 2, height: 2)),
-                        with: .color(BedPalette.cream.opacity(0.18 + generator.next() * 0.45))
+                        with: .color(BedPalette.lamp.opacity(0.16 + generator.next() * 0.38))
                     )
                 }
             }
@@ -327,6 +335,44 @@ struct PixelImage: View {
             Text("🛏️")
                 .font(.system(size: 44))
         }
+    }
+}
+
+private struct SceneBackdrop: View {
+    var name: String
+    var dim: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                if let image = PixelAsset.nsImage(name) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(
+                            width: geo.size.width,
+                            height: geo.size.height,
+                            alignment: .trailing
+                        )
+                        .clipped()
+                } else {
+                    Rectangle().fill(BedPalette.well)
+                }
+                Rectangle()
+                    .fill(Color.black.opacity(dim))
+                LinearGradient(
+                    stops: [
+                        .init(color: .black.opacity(0.28), location: 0),
+                        .init(color: .clear, location: 0.24),
+                        .init(color: .clear, location: 0.62),
+                        .init(color: .black.opacity(0.32), location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 

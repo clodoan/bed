@@ -57,7 +57,7 @@ final class NowPlaying: NSObject {
         if let elapsed, elapsed.isFinite {
             info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = max(0, elapsed)
         }
-        if let artwork {
+        if let artwork = Self.makeArtwork() {
             info[MPMediaItemPropertyArtwork] = artwork
         }
 
@@ -70,12 +70,6 @@ final class NowPlaying: NSObject {
         let center = MPNowPlayingInfoCenter.default()
         center.nowPlayingInfo = nil
         center.playbackState = .stopped
-    }
-
-    private var artwork: MPMediaItemArtwork? {
-        let image = NSImage(named: "AppIcon") ?? PixelAsset.nsImage("AppIcon")
-        guard let image else { return nil }
-        return MPMediaItemArtwork(boundsSize: image.size) { _ in image }
     }
 
     @objc nonisolated private func handlePlay(_ event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
@@ -103,5 +97,13 @@ final class NowPlaying: NSObject {
             work(self)
         }
         return .success
+    }
+
+    /// MediaPlayer asks for artwork on its own queue. Building the handler on the
+    /// main actor makes that callback trap in Swift 6.
+    nonisolated private static func makeArtwork() -> MPMediaItemArtwork? {
+        let image = NSImage(named: "AppIcon") ?? PixelAsset.nsImage("AppIcon")
+        guard let image, image.size.width > 0, image.size.height > 0 else { return nil }
+        return MPMediaItemArtwork(boundsSize: image.size) { _ in image }
     }
 }
