@@ -12,11 +12,20 @@ if [[ ! -x "$BIN" ]]; then
   exit 1
 fi
 
+MAKE_ICNS=".build/make-icns"
+if [[ ! -x "$MAKE_ICNS" || scripts/make-icns.swift -nt "$MAKE_ICNS" ]]; then
+    mkdir -p .build
+    swiftc -O -framework AppKit -o "$MAKE_ICNS" scripts/make-icns.swift
+fi
+"$MAKE_ICNS" Resources/AppIcon.png Resources/AppIcon.icns
+
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Bed"
 cp Info.plist "$APP/Contents/Info.plist"
+printf 'APPL????' > "$APP/Contents/PkgInfo"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cp Resources/AppIcon.png "$APP/Contents/Resources/AppIcon.png"
 cp Resources/night-desk.png "$APP/Contents/Resources/"
 cp Resources/dancer/*.png "$APP/Contents/Resources/"
 cp Resources/PressStart2P-Regular.ttf "$APP/Contents/Resources/"

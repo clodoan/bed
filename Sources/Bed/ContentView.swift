@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import SwiftUI
 
@@ -160,8 +161,18 @@ struct ContentView: View {
             screen(date: date)
             transport()
                 .padding(.top, 16)
-            SourceFooter(sources: Sources.catalog, current: model.station.source)
-                .padding(.top, 12)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                SourceFooter(sources: Sources.catalog, current: model.station.source)
+                Button("QUIT") {
+                    NSApp.terminate(nil)
+                }
+                .buttonStyle(.plain)
+                .font(PixelFont.ui(6))
+                .foregroundStyle(BedPalette.cream.opacity(0.28))
+                .keyboardShortcut("q", modifiers: .command)
+                .accessibilityLabel("Quit Bed")
+            }
+            .padding(.top, 12)
         }
     }
 

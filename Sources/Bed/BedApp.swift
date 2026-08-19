@@ -14,6 +14,14 @@ struct BedApp: App {
                 .accessibilityLabel("Bed")
         }
         .menuBarExtraStyle(.window)
+        .commands {
+            CommandGroup(replacing: .appTermination) {
+                Button("Quit Bed") {
+                    NSApp.terminate(nil)
+                }
+                .keyboardShortcut("q")
+            }
+        }
     }
 }
 
