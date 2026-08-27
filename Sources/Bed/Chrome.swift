@@ -15,6 +15,17 @@ enum BedPalette {
     static let amber = Color(red: 0.92, green: 0.58, blue: 0.28)
     static let outline = Color(red: 0.06, green: 0.04, blue: 0.03)
 
+    // Clamshell console hardware.
+    static let caseWood = Color(red: 0.44, green: 0.31, blue: 0.20)
+    static let caseWoodLit = Color(red: 0.56, green: 0.41, blue: 0.27)
+    static let caseWoodDark = Color(red: 0.24, green: 0.16, blue: 0.10)
+    static let face = Color(red: 0.94, green: 0.90, blue: 0.82)
+    static let faceShade = Color(red: 0.80, green: 0.74, blue: 0.63)
+    static let faceEdge = Color(red: 0.62, green: 0.56, blue: 0.46)
+    static let brass = Color(red: 0.82, green: 0.64, blue: 0.34)
+    static let brassLit = Color(red: 0.95, green: 0.82, blue: 0.52)
+    static let brassDeep = Color(red: 0.52, green: 0.38, blue: 0.17)
+
     static let phosphor = cream
     static let phosphorDim = creamDim
 }
@@ -55,150 +66,6 @@ enum PixelAsset {
 
     static func nsImage(_ name: String) -> NSImage? {
         url(name).flatMap { NSImage(contentsOf: $0) }
-    }
-}
-
-struct ChassisBackdrop: View {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    var body: some View {
-        ZStack {
-            BedPalette.night
-            if !reduceTransparency {
-                LampDust()
-                    .opacity(0.4)
-            }
-            LinearGradient(
-                colors: [BedPalette.lamp.opacity(0.08), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(maxHeight: 18)
-            .frame(maxHeight: .infinity, alignment: .top)
-            .allowsHitTesting(false)
-        }
-    }
-}
-
-private struct LampDust: View {
-    var body: some View {
-        Canvas { context, size in
-            var rng = SeededRandom(seed: 0xBED_5A15)
-            for _ in 0..<28 {
-                let x = CGFloat(rng.next()) * size.width
-                let y = CGFloat(rng.next()) * size.height
-                let warm = rng.next() > 0.45
-                let color = warm
-                    ? BedPalette.lamp.opacity(0.12 + rng.next() * 0.22)
-                    : BedPalette.cream.opacity(0.08 + rng.next() * 0.16)
-                context.fill(Path(CGRect(x: x.rounded(), y: y.rounded(), width: 1, height: 1)), with: .color(color))
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-enum ChromeShape {
-    case circle
-    case capsule
-}
-
-struct ChromeButtonStyle: ButtonStyle {
-    var shape: ChromeShape = .capsule
-    var isOn: Bool = false
-    var compact: Bool = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        PixelButtonBody(
-            configuration: configuration,
-            shape: shape,
-            isOn: isOn,
-            compact: compact,
-            pressed: configuration.isPressed
-        )
-    }
-}
-
-private struct PixelButtonBody: View {
-    var configuration: ButtonStyle.Configuration
-    var shape: ChromeShape
-    var isOn: Bool
-    var compact: Bool
-    var pressed: Bool
-
-    @Environment(\.isEnabled) private var isEnabled
-    @State private var hovered = false
-
-    private var latched: Bool { pressed || isOn }
-
-    var body: some View {
-        configuration.label
-            .font(PixelFont.ui(compact ? 7 : 9))
-            .foregroundStyle(BedPalette.ink)
-            .padding(.horizontal, shape == .circle ? 0 : (compact ? 8 : 10))
-            .frame(minHeight: compact ? 22 : 30)
-            .background {
-                PixelBevel(latched: latched, fill: fill)
-            }
-            .offset(x: latched ? 1 : 0, y: latched ? 1 : 0)
-            .opacity(isEnabled ? 1 : 0.42)
-            .animation(.easeOut(duration: 0.08), value: pressed)
-            .onHover { hovered = $0 }
-    }
-
-    private var fill: Color {
-        if isOn { return BedPalette.lamp }
-        if hovered && !latched { return BedPalette.cream }
-        return BedPalette.walnut
-    }
-}
-
-private struct PixelBevel: View {
-    var latched: Bool
-    var fill: Color
-
-    var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(BedPalette.outline)
-                .offset(x: latched ? 0 : 2, y: latched ? 0 : 2)
-            Rectangle().fill(fill)
-            Rectangle().stroke(BedPalette.outline, lineWidth: 2)
-            Rectangle()
-                .fill(BedPalette.cream.opacity(latched ? 0.08 : 0.22))
-                .frame(height: 2)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, 2)
-                .padding(.top, 2)
-            Rectangle()
-                .fill(Color.black.opacity(latched ? 0.18 : 0.22))
-                .frame(height: 2)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-                .padding(.horizontal, 2)
-                .padding(.bottom, 2)
-        }
-    }
-}
-
-struct ModeTab: View {
-    var title: String
-    var selected: Bool
-    var action: () -> Void
-
-    init(_ title: String, selected: Bool, action: @escaping () -> Void) {
-        self.title = title
-        self.selected = selected
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .textCase(.uppercase)
-                .frame(minWidth: 72)
-        }
-        .buttonStyle(ChromeButtonStyle(isOn: selected, compact: true))
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -450,19 +317,19 @@ struct SourceFooter: View {
             ForEach(sources) { source in
                 if source.id != sources.first?.id {
                     Text("/")
-                        .foregroundStyle(BedPalette.cream.opacity(0.18))
+                        .foregroundStyle(BedPalette.faceEdge.opacity(0.5))
                 }
                 Button(source.name.uppercased()) {
                     openURL(source.supportURL ?? source.homeURL)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(BedPalette.cream.opacity(source.id == current.id ? 0.55 : 0.28))
+                .foregroundStyle(source.id == current.id ? BedPalette.brassDeep : BedPalette.faceEdge)
                 .accessibilityLabel(accessName(source))
                 .accessibilityHint(source.blurb)
             }
         }
         .font(PixelFont.ui(6))
-        .foregroundStyle(BedPalette.cream.opacity(0.28))
+        .foregroundStyle(BedPalette.faceEdge)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sources")
@@ -476,7 +343,7 @@ struct SourceFooter: View {
     }
 }
 
-private struct SeededRandom {
+struct SeededRandom {
     private var state: UInt64
 
     init(seed: UInt64) {
