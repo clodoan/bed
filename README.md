@@ -6,7 +6,7 @@
 
 <p align="center">
   Late-night radio in the Mac menu bar.<br>
-  Radio Paradise mellow, NTS Poolside, Nightride synthwave.
+  House, chill, and desk music from listener-supported stations.
 </p>
 
 <p align="center">
@@ -18,9 +18,14 @@
 </p>
 
 No account. No API key. Play starts on Mellow Mix. Skip cycles stations.
-The stations are listener-supported — please
+Bed is a tuner — it opens each station's published stream. The music is
+still theirs. The stations are listener-supported — please
 [donate to Radio Paradise](https://radioparadise.com/donate),
-[support NTS](https://www.nts.live/supporters), and
+[donate to Chilltrax](https://www.chilltrax.com),
+[support NTS](https://www.nts.live/supporters),
+[open Dogglounge](https://dogglounge.com),
+[donate to Isla Negra](https://www.radioislanegra.com),
+[donate to 9128](https://9128.live/guestbook/donate), and
 [support Nightride on Patreon](https://www.patreon.com/nightridefm).
 
 ## Install
@@ -37,7 +42,15 @@ Look for the bed in the menu bar.
 ## Stations
 
 - Mellow Mix — downtempo, mellow, late night (Radio Paradise)
+- Chilltrax — chillout, downtempo, soft house (Chilltrax)
 - Poolside — balearic, boogie, lounge (NTS)
+- 4 To The Floor — house, Chicago to Detroit (NTS)
+- Slow Focus — ambient, drone, for work (NTS)
+- Low Key — quiet hip-hop, late night (NTS)
+- Dogglounge — deep house (Dogglounge)
+- Isla Negra — downtempo, ambient (Radio Isla Negra)
+- 9128 — ambient, drone (ASIP)
+- Chillsynth — chill synth, night drive (Nightride FM)
 - Nightride — synthwave (Nightride FM)
 
 ## Build from source

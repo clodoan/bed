@@ -19,6 +19,15 @@ enum Sources {
         supportLabel: "Donate"
     )
 
+    static let chilltrax = Source(
+        id: "chilltrax",
+        name: "Chilltrax",
+        blurb: "Listener-supported chillout radio.",
+        homeURL: URL(string: "https://www.chilltrax.com")!,
+        supportURL: URL(string: "https://www.chilltrax.com")!,
+        supportLabel: "Donate"
+    )
+
     static let nts = Source(
         id: "nts",
         name: "NTS",
@@ -26,6 +35,33 @@ enum Sources {
         homeURL: URL(string: "https://www.nts.live")!,
         supportURL: URL(string: "https://www.nts.live/supporters")!,
         supportLabel: "Support"
+    )
+
+    static let dogglounge = Source(
+        id: "dogglounge",
+        name: "Dogglounge",
+        blurb: "Independent deep house radio since 2003.",
+        homeURL: URL(string: "https://dogglounge.com")!,
+        supportURL: nil,
+        supportLabel: "Open"
+    )
+
+    static let islaNegra = Source(
+        id: "islanegra",
+        name: "Isla Negra",
+        blurb: "Listener-supported downtempo from Chile.",
+        homeURL: URL(string: "https://www.radioislanegra.com")!,
+        supportURL: URL(string: "https://www.radioislanegra.com")!,
+        supportLabel: "Donate"
+    )
+
+    static let asip = Source(
+        id: "9128",
+        name: "9128",
+        blurb: "Ambient radio from the ASIP label.",
+        homeURL: URL(string: "https://9128.live")!,
+        supportURL: URL(string: "https://9128.live/guestbook/donate")!,
+        supportLabel: "Donate"
     )
 
     static let nightride = Source(
@@ -51,7 +87,7 @@ struct Station: Equatable {
 }
 
 enum Stations {
-    private static let catalogVersion = 2
+    private static let catalogVersion = 3
     private static let catalogVersionKey = "stationCatalogVersion"
     static let indexDefaultsKey = "stationIndex"
 
@@ -63,10 +99,58 @@ enum Stations {
             source: Sources.radioParadise
         ),
         Station(
+            name: "Chilltrax",
+            vibe: "chillout, downtempo, soft house",
+            streamURL: URL(string: "https://streamssleu.chilltrax.com/stream")!,
+            source: Sources.chilltrax
+        ),
+        Station(
             name: "Poolside",
             vibe: "balearic, boogie, lounge",
             streamURL: URL(string: "https://stream-mixtape-geo.ntslive.net/mixtape4")!,
             source: Sources.nts
+        ),
+        Station(
+            name: "4 To The Floor",
+            vibe: "house, chicago to detroit",
+            streamURL: URL(string: "https://stream-mixtape-geo.ntslive.net/mixtape5")!,
+            source: Sources.nts
+        ),
+        Station(
+            name: "Slow Focus",
+            vibe: "ambient, drone, for work",
+            streamURL: URL(string: "https://stream-mixtape-geo.ntslive.net/mixtape")!,
+            source: Sources.nts
+        ),
+        Station(
+            name: "Low Key",
+            vibe: "quiet hip-hop, late night",
+            streamURL: URL(string: "https://stream-mixtape-geo.ntslive.net/mixtape2")!,
+            source: Sources.nts
+        ),
+        Station(
+            name: "Dogglounge",
+            vibe: "deep house",
+            streamURL: URL(string: "https://dogglounge.com:8000/")!,
+            source: Sources.dogglounge
+        ),
+        Station(
+            name: "Isla Negra",
+            vibe: "downtempo, ambient, chile",
+            streamURL: URL(string: "https://radioislanegra.org/radio/8000/basic.aac")!,
+            source: Sources.islaNegra
+        ),
+        Station(
+            name: "9128",
+            vibe: "ambient, drone, asip",
+            streamURL: URL(string: "https://streams.radio.co/s0aa1e6f4a/listen")!,
+            source: Sources.asip
+        ),
+        Station(
+            name: "Chillsynth",
+            vibe: "chill synth, night drive",
+            streamURL: URL(string: "https://stream.chillsynth.fm/chillsynth.mp3")!,
+            source: Sources.nightride
         ),
         Station(
             name: "Nightride",

@@ -15,16 +15,8 @@ enum BedPalette {
     static let amber = Color(red: 0.92, green: 0.58, blue: 0.28)
     static let outline = Color(red: 0.06, green: 0.04, blue: 0.03)
 
-    // Clamshell console hardware.
-    static let caseWood = Color(red: 0.44, green: 0.31, blue: 0.20)
-    static let caseWoodLit = Color(red: 0.56, green: 0.41, blue: 0.27)
-    static let caseWoodDark = Color(red: 0.24, green: 0.16, blue: 0.10)
-    static let face = Color(red: 0.94, green: 0.90, blue: 0.82)
-    static let faceShade = Color(red: 0.80, green: 0.74, blue: 0.63)
-    static let faceEdge = Color(red: 0.62, green: 0.56, blue: 0.46)
-    static let brass = Color(red: 0.82, green: 0.64, blue: 0.34)
-    static let brassLit = Color(red: 0.95, green: 0.82, blue: 0.52)
-    static let brassDeep = Color(red: 0.52, green: 0.38, blue: 0.17)
+    static let face = night
+    static let faceEdge = Color(red: 0.55, green: 0.48, blue: 0.38)
 
     static let phosphor = cream
     static let phosphorDim = creamDim
@@ -111,20 +103,9 @@ struct LCDPanel<Content: View>: View {
     }
 
     private var frame: some View {
-        ZStack {
-            Rectangle()
-                .stroke(BedPalette.outline, lineWidth: 3)
-            Rectangle()
-                .stroke(BedPalette.walnutDeep.opacity(0.95), lineWidth: 2)
-                .padding(3)
-            Rectangle()
-                .stroke(BedPalette.lamp.opacity(0.22), lineWidth: 1)
-                .padding(5)
-                .mask(alignment: .topLeading) {
-                    Rectangle().padding(.bottom, 28).padding(.trailing, 40)
-                }
-        }
-        .allowsHitTesting(false)
+        Rectangle()
+            .stroke(BedPalette.outline, lineWidth: 2)
+            .allowsHitTesting(false)
     }
 }
 
@@ -312,27 +293,55 @@ struct SourceFooter: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        HStack(spacing: 5) {
-            Text("VIA")
-            ForEach(sources) { source in
-                if source.id != sources.first?.id {
-                    Text("/")
-                        .foregroundStyle(BedPalette.faceEdge.opacity(0.5))
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    Text("VIA")
+                    ForEach(Array(sources.enumerated()), id: \.element.id) { index, source in
+                        if index > 0 {
+                            Text("/")
+                                .foregroundStyle(BedPalette.cream.opacity(0.18))
+                        }
+                        Button(source.name.uppercased()) {
+                            openURL(source.supportURL ?? source.homeURL)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(BedPalette.cream.opacity(source.id == current.id ? 0.62 : 0.28))
+                        .accessibilityLabel(accessName(source))
+                        .accessibilityHint(source.blurb)
+                        .id(source.id)
+                    }
                 }
-                Button(source.name.uppercased()) {
-                    openURL(source.supportURL ?? source.homeURL)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(source.id == current.id ? BedPalette.brassDeep : BedPalette.faceEdge)
-                .accessibilityLabel(accessName(source))
-                .accessibilityHint(source.blurb)
+                .font(PixelFont.ui(6))
+                .foregroundStyle(BedPalette.cream.opacity(0.28))
+                .fixedSize(horizontal: true, vertical: true)
+            }
+            .mask {
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.08),
+                        .init(color: .black, location: 0.92),
+                        .init(color: .clear, location: 1)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            }
+            .onAppear { scroll(to: current.id, in: proxy) }
+            .onChange(of: current.id) { _, id in
+                scroll(to: id, in: proxy)
             }
         }
-        .font(PixelFont.ui(6))
-        .foregroundStyle(BedPalette.faceEdge)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sources")
+    }
+
+    private func scroll(to id: String, in proxy: ScrollViewProxy) {
+        withAnimation(.easeInOut(duration: 0.28)) {
+            proxy.scrollTo(id, anchor: .center)
+        }
     }
 
     private func accessName(_ source: Source) -> String {
@@ -343,7 +352,7 @@ struct SourceFooter: View {
     }
 }
 
-struct SeededRandom {
+private struct SeededRandom {
     private var state: UInt64
 
     init(seed: UInt64) {

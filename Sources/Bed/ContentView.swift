@@ -139,79 +139,45 @@ struct ContentView: View {
     @ObservedObject var model: BedModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var snowUntil: Date?
-    @State private var joystickLean: Double = 0
-    @State private var leanToken = 0
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: snowUntil == nil)) { context in
-            console(date: context.date)
+            radio(date: context.date)
         }
-        .padding(6)
-        .frame(width: 360)
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 14)
+        .frame(width: 340)
         .fixedSize(horizontal: false, vertical: true)
-        .background(BedPalette.caseWoodDark)
+        .background(BedPalette.night)
         .preferredColorScheme(.dark)
         .onChange(of: model.station.name) { _, _ in
             flashSnow(reduceMotion ? 0 : 0.2)
         }
     }
 
-    private func console(date: Date) -> some View {
-        WoodenCase(lit: model.player.isPlaying) {
-            VStack(spacing: 0) {
-                lid(date: date)
-                HingeBar()
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 9)
-                deck()
+    private func radio(date: Date) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            screen(date: date)
+            HStack(alignment: .center, spacing: 16) {
+                SpeakerGrille()
+                    .frame(width: 72, height: 72)
+                Spacer(minLength: 4)
+                transport()
             }
-        }
-    }
-
-    private func lid(date: Date) -> some View {
-        FacePanel {
-            HStack(alignment: .top, spacing: 10) {
-                screen(date: date)
-                VStack(spacing: 0) {
-                    SpeakerGrille()
-                        .frame(width: 66, height: 60)
-                    Spacer(minLength: 8)
-                    TuningDial(
-                        index: model.stationIndex,
-                        count: Stations.all.count,
-                        lit: model.player.isPlaying
-                    )
-                    Text("TUNE")
-                        .font(PixelFont.ui(5))
-                        .foregroundStyle(BedPalette.faceEdge)
-                        .padding(.top, 3)
+            .padding(.top, 16)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                SourceFooter(sources: Sources.catalog, current: model.station.source)
+                Button("QUIT") {
+                    NSApp.terminate(nil)
                 }
-                .frame(width: 66)
+                .buttonStyle(.plain)
+                .font(PixelFont.ui(6))
+                .foregroundStyle(BedPalette.cream.opacity(0.28))
+                .keyboardShortcut("q", modifiers: .command)
+                .accessibilityLabel("Quit Bed")
             }
-        }
-    }
-
-    private func deck() -> some View {
-        FacePanel {
-            VStack(spacing: 12) {
-                HStack(alignment: .center, spacing: 12) {
-                    Joystick(lean: joystickLean, lit: model.player.isPlaying)
-                    Spacer(minLength: 0)
-                    transport()
-                }
-                HStack(alignment: .center, spacing: 8) {
-                    PowerLamp(on: model.player.isPlaying)
-                    SourceFooter(sources: Sources.catalog, current: model.station.source)
-                    Button("QUIT") {
-                        NSApp.terminate(nil)
-                    }
-                    .buttonStyle(.plain)
-                    .font(PixelFont.ui(6))
-                    .foregroundStyle(BedPalette.faceEdge)
-                    .keyboardShortcut("q", modifiers: .command)
-                    .accessibilityLabel("Quit Bed")
-                }
-            }
+            .padding(.top, 12)
         }
     }
 
@@ -242,7 +208,7 @@ struct ContentView: View {
                 }
 
                 Spacer(minLength: 0)
-                    .frame(minHeight: 104)
+                    .frame(minHeight: 148)
                     .accessibilityHidden(true)
 
                 stationReadout
@@ -260,41 +226,24 @@ struct ContentView: View {
     }
 
     private func transport() -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            Button {
-                nudge(-1, model.previousTapped)
-            } label: {
+        HStack(alignment: .center, spacing: 10) {
+            Button(action: model.previousTapped) {
                 Text("<<")
             }
-            .buttonStyle(ArcadeButtonStyle(kind: .skip))
+            .buttonStyle(TactileButtonStyle(kind: .skip))
             .accessibilityLabel("Previous station")
 
             Button(action: model.playTapped) {
                 Text(model.player.isPlaying ? "||" : "|>")
             }
-            .buttonStyle(ArcadeButtonStyle(kind: .action, lit: model.player.isPlaying))
+            .buttonStyle(TactileButtonStyle(kind: .action, lit: model.player.isPlaying))
             .accessibilityLabel(model.player.isPlaying ? "Pause" : "Play")
 
-            Button {
-                nudge(1, model.skipTapped)
-            } label: {
+            Button(action: model.skipTapped) {
                 Text(">>")
             }
-            .buttonStyle(ArcadeButtonStyle(kind: .skip))
+            .buttonStyle(TactileButtonStyle(kind: .skip))
             .accessibilityLabel("Next station")
-        }
-    }
-
-    private func nudge(_ direction: Double, _ action: () -> Void) {
-        action()
-        withAnimation { joystickLean = direction }
-        leanToken += 1
-        let token = leanToken
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(420))
-            if token == leanToken {
-                withAnimation { joystickLean = 0 }
-            }
         }
     }
 
