@@ -11,7 +11,7 @@ enum BedPalette {
     static let walnut = Color(red: 0.52, green: 0.40, blue: 0.30)
     static let walnutDeep = Color(red: 0.32, green: 0.24, blue: 0.18)
     static let lamp = Color(red: 0.88, green: 0.64, blue: 0.32)
-    static let glow = Color(red: 0.78, green: 0.88, blue: 0.94)
+    static let glow = cream
     static let amber = Color(red: 0.92, green: 0.58, blue: 0.28)
     static let outline = Color(red: 0.06, green: 0.04, blue: 0.03)
 
@@ -67,45 +67,125 @@ struct LCDPanel<Content: View>: View {
     var backdrop: String? = nil
     @ViewBuilder var content: () -> Content
 
+    private let lip: CGFloat = 7
+
     var body: some View {
         content()
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
             .background { well }
-            .overlay { frame }
+            .overlay { bezel }
     }
 
     private var well: some View {
         ZStack {
-            Rectangle().fill(BedPalette.outline)
-            if let backdrop {
-                SceneBackdrop(name: backdrop, dim: lit ? 0.08 : 0.18)
-                    .padding(3)
-                    .clipped()
-            } else {
-                Rectangle()
-                    .fill(BedPalette.well)
-                    .padding(3)
-                if lit {
-                    Rectangle()
-                        .fill(BedPalette.glow.opacity(0.08))
-                        .padding(3)
-                }
-            }
-            if snow > 0 {
-                PixelSnow()
-                    .opacity(snow)
-                    .padding(3)
-                    .allowsHitTesting(false)
-            }
+            Rectangle().fill(BedPalette.well)
+            glass
+                .padding(lip)
+                .clipped()
         }
     }
 
-    private var frame: some View {
-        Rectangle()
-            .stroke(BedPalette.outline, lineWidth: 2)
-            .allowsHitTesting(false)
+    private var glass: some View {
+        ZStack {
+            if let backdrop {
+                SceneBackdrop(name: backdrop, dim: lit ? 0.10 : 0.22)
+            } else {
+                Rectangle().fill(BedPalette.outline)
+            }
+            RetroScreen(lit: lit)
+            if snow > 0 {
+                PixelSnow()
+                    .opacity(snow)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var bezel: some View {
+        ZStack {
+            Rectangle()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.10),
+                            Color.black.opacity(0.55)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+            Rectangle()
+                .stroke(BedPalette.outline.opacity(0.9), lineWidth: 1)
+                .padding(lip)
+            Rectangle()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.55),
+                            Color.white.opacity(0.06)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+                .padding(lip - 1)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct RetroScreen: View {
+    var lit: Bool
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(BedPalette.cream.opacity(lit ? 0.07 : 0.03))
+                .blendMode(.softLight)
+            Scanlines()
+                .opacity(lit ? 0.55 : 0.38)
+            LinearGradient(
+                stops: [
+                    .init(color: Color.white.opacity(lit ? 0.10 : 0.05), location: 0),
+                    .init(color: Color.white.opacity(0.02), location: 0.16),
+                    .init(color: .clear, location: 0.38),
+                    .init(color: Color.black.opacity(0.28), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            RadialGradient(
+                colors: [
+                    .clear,
+                    Color.black.opacity(0.22)
+                ],
+                center: .center,
+                startRadius: 20,
+                endRadius: 220
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct Scanlines: View {
+    var body: some View {
+        Canvas { context, size in
+            let step: CGFloat = 2
+            var y: CGFloat = 0
+            while y < size.height {
+                context.fill(
+                    Path(CGRect(x: 0, y: y, width: size.width, height: 1)),
+                    with: .color(BedPalette.outline.opacity(0.28))
+                )
+                y += step
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 

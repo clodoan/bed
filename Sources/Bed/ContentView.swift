@@ -27,7 +27,14 @@ final class BedModel: ObservableObject {
             case .idle: return "idle"
             case .playing: return "playing"
             case .paused: return "paused"
+            case .error: return "no signal"
+            }
+        }
+
+        var detail: String {
+            switch self {
             case .error(let message): return message
+            default: return line
             }
         }
     }
@@ -217,9 +224,11 @@ struct ContentView: View {
                 Text(model.status.line.uppercased())
                     .font(PixelFont.ui(7))
                     .foregroundStyle(statusColor)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, minHeight: 12, maxHeight: 12, alignment: .leading)
                     .padding(.top, 10)
+                    .accessibilityLabel(model.status.detail)
             }
             .shadow(color: .black.opacity(0.8), radius: 0, x: 1, y: 1)
         }

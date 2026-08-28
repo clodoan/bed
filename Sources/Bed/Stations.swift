@@ -149,7 +149,7 @@ enum Stations {
         Station(
             name: "Chillsynth",
             vibe: "chill synth, night drive",
-            streamURL: URL(string: "https://stream.chillsynth.fm/chillsynth.mp3")!,
+            streamURL: URL(string: "https://stream.nightride.fm/chillsynth.mp3")!,
             source: Sources.nightride
         ),
         Station(
