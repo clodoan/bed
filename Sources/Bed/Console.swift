@@ -40,37 +40,72 @@ struct TactileButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
         let d = diameter
+        let well = d + 10
         return ZStack {
             Circle()
-                .fill(Color.black.opacity(0.45))
-                .frame(width: d + 8, height: d + 8)
+                .fill(
+                    RadialGradient(
+                        colors: [Color.black.opacity(0.7), Color.black.opacity(0.32)],
+                        center: .center,
+                        startRadius: d * 0.15,
+                        endRadius: well * 0.52
+                    )
+                )
+                .frame(width: well, height: well)
+                .overlay(
+                    Circle()
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.75), Color.white.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 1
+                        )
+                )
 
             Circle()
                 .fill(
                     RadialGradient(
                         colors: capColors,
-                        center: UnitPoint(x: 0.32, y: 0.26),
-                        startRadius: 0,
-                        endRadius: d * 0.72
+                        center: UnitPoint(x: 0.4, y: 0.34),
+                        startRadius: 1,
+                        endRadius: d * 0.64
                     )
                 )
                 .overlay {
-                    Ellipse()
-                        .fill(BedPalette.lamp.opacity(pressed ? 0.06 : 0.22))
-                        .frame(width: d * 0.46, height: d * 0.2)
-                        .offset(x: -d * 0.06, y: -d * 0.22)
+                    Circle()
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(pressed ? 0.04 : 0.12),
+                                    Color.clear,
+                                    Color.black.opacity(0.4)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 1
+                        )
                 }
-                .overlay(Circle().strokeBorder(Color.black.opacity(0.45), lineWidth: 1))
+                .overlay {
+                    if lit {
+                        Circle()
+                            .stroke(BedPalette.lamp.opacity(pressed ? 0.12 : 0.28), lineWidth: 3)
+                            .blur(radius: 3)
+                            .padding(1)
+                    }
+                }
                 .frame(width: d, height: d)
-                .shadow(color: .black.opacity(pressed ? 0.2 : 0.55), radius: pressed ? 1 : 4, y: pressed ? 1 : 3)
-                .offset(y: pressed ? 2 : 0)
+                .shadow(color: .black.opacity(pressed ? 0.18 : 0.48), radius: pressed ? 1 : 2.5, y: pressed ? 1 : 2)
+                .offset(y: pressed ? 1.5 : 0)
 
             configuration.label
                 .font(PixelFont.ui(kind == .action ? 9 : 8))
-                .foregroundStyle(lit ? BedPalette.ink : BedPalette.cream)
-                .offset(y: pressed ? 2 : 0)
+                .foregroundStyle(lit ? BedPalette.ink : BedPalette.cream.opacity(0.82))
+                .offset(y: pressed ? 1.5 : 0)
         }
-        .frame(width: d + 8, height: d + 8)
+        .frame(width: well, height: well)
         .contentShape(Circle())
         .animation(.easeOut(duration: 0.08), value: pressed)
     }
@@ -78,15 +113,15 @@ struct TactileButtonStyle: ButtonStyle {
     private var capColors: [Color] {
         if lit {
             return [
-                Color(red: 1.0, green: 0.82, blue: 0.48),
-                BedPalette.lamp,
-                BedPalette.amber
+                Color(red: 0.86, green: 0.66, blue: 0.36),
+                Color(red: 0.72, green: 0.48, blue: 0.20),
+                Color(red: 0.42, green: 0.26, blue: 0.10)
             ]
         }
         return [
-            Color(red: 0.26, green: 0.22, blue: 0.18),
-            Color(red: 0.13, green: 0.11, blue: 0.09),
-            Color(red: 0.06, green: 0.05, blue: 0.04)
+            Color(red: 0.20, green: 0.17, blue: 0.15),
+            Color(red: 0.13, green: 0.11, blue: 0.10),
+            Color(red: 0.07, green: 0.06, blue: 0.05)
         ]
     }
 }

@@ -315,6 +315,7 @@ struct SourceFooter: View {
                 .font(PixelFont.ui(6))
                 .foregroundStyle(BedPalette.cream.opacity(0.28))
                 .fixedSize(horizontal: true, vertical: true)
+                .padding(.horizontal, 28)
             }
             .mask {
                 LinearGradient(
