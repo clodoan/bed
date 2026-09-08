@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Bed",
+    name: "LofiHouse",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "Bed", targets: ["Bed"])
+        .executable(name: "LofiHouse", targets: ["Bed"])
     ],
     targets: [
         .executableTarget(
@@ -17,9 +17,6 @@ let package = Package(
                 .linkedFramework("AppKit"),
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("MediaPlayer"),
-                .linkedFramework("MediaToolbox"),
-                .linkedFramework("Accelerate"),
-                .linkedFramework("CoreMedia"),
                 .linkedFramework("CoreAudio")
             ]
         )

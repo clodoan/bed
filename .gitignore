@@ -2,6 +2,7 @@
 .swiftpm/
 .venv/
 Bed.app/
+Lo fi house.app/
 *.zip
 *.xcodeproj/xcuserdata/
 DerivedData/

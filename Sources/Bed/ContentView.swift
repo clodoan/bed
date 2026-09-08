@@ -7,11 +7,15 @@ final class BedModel: ObservableObject {
     @Published private(set) var stationIndex: Int {
         didSet { UserDefaults.standard.set(stationIndex, forKey: Stations.indexDefaultsKey) }
     }
-    @Published var status: Status = .idle
+    @Published private(set) var status: Status = .idle
 
     var station: Station { Stations.all[stationIndex] }
+    var isPlaying: Bool {
+        if case .playing = status { return true }
+        return false
+    }
 
-    let player = Player()
+    private let player = Player()
     private let nowPlaying = NowPlaying()
     private var tunedStationURL: URL?
     private var cancellables = Set<AnyCancellable>()
@@ -41,23 +45,16 @@ final class BedModel: ObservableObject {
 
     init() {
         stationIndex = Stations.loadSavedIndex()
-        player.objectWillChange
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
-            }
-            .store(in: &cancellables)
         player.$isPlaying
             .sink { [weak self] playing in
                 self?.playbackChanged(playing)
             }
             .store(in: &cancellables)
         player.onItemFailed = { [weak self] reason in
-            self?.status = .error(reason)
-            self?.refreshNowPlaying()
+            self?.setStatus(.error(reason))
         }
         player.onRouteLost = { [weak self] in
-            self?.status = .paused
-            self?.refreshNowPlaying()
+            self?.setStatus(.paused)
         }
         nowPlaying.onPlay = { [weak self] in self?.play() }
         nowPlaying.onPause = { [weak self] in self?.pause() }
@@ -68,7 +65,7 @@ final class BedModel: ObservableObject {
     }
 
     func playTapped() {
-        if player.isPlaying {
+        if isPlaying {
             pause()
         } else {
             play()
@@ -78,19 +75,17 @@ final class BedModel: ObservableObject {
     func play() {
         if player.hasItem, tunedStationURL == station.streamURL {
             player.play()
-            status = .playing
+            setStatus(.playing)
         } else {
             tune(to: station)
         }
-        refreshNowPlaying()
     }
 
     func pause() {
         player.pause()
-        if status == .playing {
-            status = .paused
+        if isPlaying {
+            setStatus(.paused)
         }
-        refreshNowPlaying()
     }
 
     func skipTapped() {
@@ -106,18 +101,19 @@ final class BedModel: ObservableObject {
     private func tune(to station: Station) {
         tunedStationURL = station.streamURL
         player.load(url: station.streamURL)
-        status = .playing
-        refreshNowPlaying()
+        setStatus(.playing)
     }
 
     private func playbackChanged(_ playing: Bool) {
         if playing {
-            if status == .paused || status == .idle {
-                status = .playing
-            }
-        } else if status == .playing {
-            status = .paused
+            setStatus(.playing)
+        } else if isPlaying {
+            setStatus(.paused)
         }
+    }
+
+    private func setStatus(_ status: Status) {
+        self.status = status
         refreshNowPlaying()
     }
 
@@ -136,8 +132,7 @@ final class BedModel: ObservableObject {
             title: station.name,
             artist: station.source.name,
             subtitle: station.vibe,
-            isPlaying: player.isPlaying,
-            isLive: true
+            isPlaying: isPlaying
         )
     }
 }
@@ -186,7 +181,7 @@ struct ContentView: View {
                 .font(PixelFont.ui(6))
                 .foregroundStyle(BedPalette.cream.opacity(0.28))
                 .keyboardShortcut("q", modifiers: .command)
-                .accessibilityLabel("Quit Bed")
+                .accessibilityLabel("Quit Lo fi house")
             }
             .padding(.top, 12)
         }
@@ -200,15 +195,17 @@ struct ContentView: View {
         }()
 
         return LCDPanel(
-            lit: model.player.isPlaying,
+            lit: model.isPlaying,
             snow: snow,
-            scene: lcdScene
+            face: face,
+            playing: model.isPlaying,
+            reduceMotion: reduceMotion
         ) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(lcdPower)
                         .font(PixelFont.ui(7))
-                        .foregroundStyle(model.player.isPlaying ? BedPalette.glow : BedPalette.creamDim)
+                        .foregroundStyle(model.isPlaying ? BedPalette.glow : BedPalette.creamDim)
                     Text(String(format: "%d/%d", model.stationIndex + 1, Stations.all.count))
                         .font(PixelFont.ui(7))
                         .foregroundStyle(BedPalette.creamDim)
@@ -247,10 +244,10 @@ struct ContentView: View {
             .accessibilityLabel("Previous station")
 
             Button(action: model.playTapped) {
-                Text(model.player.isPlaying ? "||" : "|>")
+                Text(model.isPlaying ? "||" : "|>")
             }
-            .buttonStyle(TactileButtonStyle(kind: .action, lit: model.player.isPlaying))
-            .accessibilityLabel(model.player.isPlaying ? "Pause" : "Play")
+            .buttonStyle(TactileButtonStyle(kind: .action, lit: model.isPlaying))
+            .accessibilityLabel(model.isPlaying ? "Pause" : "Play")
 
             Button(action: model.skipTapped) {
                 Text(">>")
@@ -260,29 +257,17 @@ struct ContentView: View {
         }
     }
 
-    private var lcdScene: LCDScene {
-        switch face {
-        case .desk:
-            return .desk(playing: model.player.isPlaying, reduceMotion: reduceMotion)
-        case .dancer:
-            return .dancer(playing: model.player.isPlaying, reduceMotion: reduceMotion)
-        }
-    }
-
     private var faceStage: some View {
         Color.clear
             .frame(maxWidth: .infinity, minHeight: 148)
-            .accessibilityLabel(face == .dancer
-                ? (model.player.isPlaying ? "Character dancing" : "Character idle")
-                : "")
-            .accessibilityHidden(face != .dancer)
+            .accessibilityHidden(true)
     }
 
     private var stationReadout: some View {
         VStack(alignment: .leading, spacing: 0) {
             MarqueeText(
                 text: model.station.name.uppercased(),
-                running: model.player.isPlaying,
+                running: model.isPlaying,
                 reduceMotion: reduceMotion
             )
             .frame(height: 20, alignment: .leading)
@@ -297,7 +282,7 @@ struct ContentView: View {
     }
 
     private var lcdPower: String {
-        model.player.isPlaying ? "ON" : "STBY"
+        model.isPlaying ? "ON" : "STBY"
     }
 
     private var lcdClock: String {

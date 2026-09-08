@@ -39,24 +39,15 @@ final class NowPlaying: NSObject {
         title: String,
         artist: String,
         subtitle: String,
-        isPlaying: Bool,
-        isLive: Bool,
-        duration: TimeInterval? = nil,
-        elapsed: TimeInterval? = nil
+        isPlaying: Bool
     ) {
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: title,
             MPMediaItemPropertyArtist: artist,
             MPMediaItemPropertyAlbumTitle: subtitle,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
-            MPNowPlayingInfoPropertyIsLiveStream: isLive,
+            MPNowPlayingInfoPropertyIsLiveStream: true,
         ]
-        if let duration, duration.isFinite, duration > 0 {
-            info[MPMediaItemPropertyPlaybackDuration] = duration
-        }
-        if let elapsed, elapsed.isFinite {
-            info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = max(0, elapsed)
-        }
         if let artwork = Self.makeArtwork() {
             info[MPMediaItemPropertyArtwork] = artwork
         }

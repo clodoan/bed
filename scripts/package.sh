@@ -5,9 +5,9 @@ cd "$(dirname "$0")/.."
 ./scripts/bundle.sh
 
 # ditto preserves the .app bundle; `zip -r` of the repo does not.
-OUT="${1:-$HOME/Desktop/Bed.zip}"
+OUT="${1:-$HOME/Desktop/Lo fi house.zip}"
 rm -f "$OUT"
-ditto -c -k --keepParent Bed.app "$OUT"
+ditto -c -k --keepParent "Lo fi house.app" "$OUT"
 
 echo "Packed $OUT"
 unzip -l "$OUT" | head -20

@@ -8,18 +8,10 @@ enum BedPalette {
     static let well = Color(red: 0.08, green: 0.07, blue: 0.06)
     static let cream = Color(red: 0.93, green: 0.86, blue: 0.72)
     static let creamDim = Color(red: 0.93, green: 0.86, blue: 0.72).opacity(0.48)
-    static let walnut = Color(red: 0.52, green: 0.40, blue: 0.30)
-    static let walnutDeep = Color(red: 0.32, green: 0.24, blue: 0.18)
     static let lamp = Color(red: 0.88, green: 0.64, blue: 0.32)
     static let glow = cream
     static let amber = Color(red: 0.92, green: 0.58, blue: 0.28)
     static let outline = Color(red: 0.06, green: 0.04, blue: 0.03)
-
-    static let face = night
-    static let faceEdge = Color(red: 0.55, green: 0.48, blue: 0.38)
-
-    static let phosphor = cream
-    static let phosphorDim = creamDim
 }
 
 enum PixelFont {
@@ -45,8 +37,6 @@ enum PixelAsset {
         let file = "\(name).\(ext)"
         let candidates = [
             Bundle.main.resourceURL?.appendingPathComponent(file),
-            Bundle.main.resourceURL?.appendingPathComponent("dancer/\(file)"),
-            Bundle.main.resourceURL?.appendingPathComponent("desk/\(file)"),
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
                 .appendingPathComponent("Resources/\(file)"),
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -64,15 +54,12 @@ enum PixelAsset {
     }
 }
 
-enum LCDScene {
-    case desk(playing: Bool, reduceMotion: Bool)
-    case dancer(playing: Bool, reduceMotion: Bool)
-}
-
 struct LCDPanel<Content: View>: View {
     var lit: Bool
     var snow: Double
-    var scene: LCDScene = .desk(playing: false, reduceMotion: false)
+    var face: Face = .dancer
+    var playing: Bool = false
+    var reduceMotion: Bool = false
     @ViewBuilder var content: () -> Content
 
     private let lip: CGFloat = 7
@@ -109,10 +96,10 @@ struct LCDPanel<Content: View>: View {
 
     @ViewBuilder
     private var tube: some View {
-        switch scene {
-        case .desk(let playing, let reduceMotion):
+        switch face {
+        case .desk:
             DeskTube(playing: playing, reduceMotion: reduceMotion, lit: lit)
-        case .dancer(let playing, let reduceMotion):
+        case .dancer:
             DancerTube(playing: playing, reduceMotion: reduceMotion, lit: lit)
         }
     }
@@ -279,7 +266,10 @@ private struct DeskTube: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.4, paused: reduceMotion || !playing)) { context in
-            SceneBackdrop(name: frameName(at: context.date), dim: lit ? 0.10 : 0.22)
+            ZStack {
+                SceneBackdrop(name: frameName(at: context.date))
+                TubeWash(dim: lit ? 0.10 : 0.22)
+            }
         }
     }
 
@@ -300,7 +290,7 @@ private struct DancerTube: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            SceneBackdrop(name: "toddler-room", wash: false, anchor: .leading)
+            SceneBackdrop(name: "toddler-room", anchor: .leading)
             DancerView(playing: playing, reduceMotion: reduceMotion)
                 .padding(.leading, 10)
                 .padding(.bottom, 84)
@@ -406,30 +396,23 @@ private struct TubeWash: View {
 
 private struct SceneBackdrop: View {
     var name: String
-    var dim: Double = 0
-    var wash: Bool = true
     var anchor: Alignment = .trailing
 
     var body: some View {
         GeometryReader { geo in
-            ZStack {
-                if let image = PixelAsset.nsImage(name) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .interpolation(.none)
-                        .scaledToFill()
-                        .frame(
-                            width: geo.size.width,
-                            height: geo.size.height,
-                            alignment: anchor
-                        )
-                        .clipped()
-                } else {
-                    Rectangle().fill(BedPalette.well)
-                }
-                if wash {
-                    TubeWash(dim: dim)
-                }
+            if let image = PixelAsset.nsImage(name) {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.none)
+                    .scaledToFill()
+                    .frame(
+                        width: geo.size.width,
+                        height: geo.size.height,
+                        alignment: anchor
+                    )
+                    .clipped()
+            } else {
+                Rectangle().fill(BedPalette.well)
             }
         }
         .allowsHitTesting(false)

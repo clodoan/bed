@@ -7,7 +7,6 @@ import Foundation
 final class Player: ObservableObject {
     @Published private(set) var isPlaying = false
 
-    let meter = AudioMeter()
     var onItemFailed: ((String) -> Void)?
     var onRouteLost: (() -> Void)?
 
@@ -18,16 +17,6 @@ final class Player: ObservableObject {
 
     var hasItem: Bool {
         player?.currentItem != nil
-    }
-
-    var elapsed: TimeInterval {
-        player?.currentTime().seconds ?? 0
-    }
-
-    var duration: TimeInterval? {
-        guard let time = player?.currentItem?.duration, time.isNumeric else { return nil }
-        let seconds = time.seconds
-        return seconds.isFinite && seconds > 0 ? seconds : nil
     }
 
     init() {
@@ -48,10 +37,8 @@ final class Player: ObservableObject {
         }
 
         player?.pause()
-        meter.reset()
 
         let item = AVPlayerItem(url: url)
-        meter.attach(to: item)
         failureCancellable = item.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] itemStatus in
@@ -90,10 +77,6 @@ final class Player: ObservableObject {
     func pause() {
         player?.pause()
         isPlaying = false
-    }
-
-    func seekToStart() {
-        player?.seek(to: .zero)
     }
 
     private func handleRouteLost() {

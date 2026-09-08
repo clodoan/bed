@@ -3,19 +3,19 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>Bed</string>
+	<string>Lo fi house</string>
 	<key>CFBundleDisplayName</key>
-	<string>Bed</string>
+	<string>Lo fi house</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.clodoan.bed</string>
+	<string>com.clodoan.lofihouse</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleExecutable</key>
-	<string>Bed</string>
+	<string>LofiHouse</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>8</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

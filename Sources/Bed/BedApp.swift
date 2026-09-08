@@ -10,13 +10,13 @@ struct BedApp: App {
         MenuBarExtra {
             ContentView(model: model)
         } label: {
-            Text("🛏️")
-                .accessibilityLabel("Bed")
+            Image(systemName: "house.fill")
+                .accessibilityLabel("Lo fi house")
         }
         .menuBarExtraStyle(.window)
         .commands {
             CommandGroup(replacing: .appTermination) {
-                Button("Quit Bed") {
+                Button("Quit Lo fi house") {
                     NSApp.terminate(nil)
                 }
                 .keyboardShortcut("q")

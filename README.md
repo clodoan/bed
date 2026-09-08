@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="Resources/AppIcon.png" width="128" alt="Bed">
+  <img src="Resources/AppIcon.png" width="128" alt="Lo fi house">
 </p>
 
-<h1 align="center">Bed</h1>
+<h1 align="center">Lo fi house</h1>
 
 <p align="center">
   Late-night radio in the Mac menu bar.<br>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/clodoan/bed/releases/latest"><strong>Download Bed.app.zip</strong></a>
+  <a href="https://github.com/clodoan/bed/releases/latest"><strong>Download Lo fi house.app.zip</strong></a>
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 </p>
 
 No account. No API key. Play starts on Mellow Mix. Skip cycles stations.
-Bed is a tuner — it opens each station's published stream. The music is
+Lo fi house is a tuner — it opens each station's published stream. The music is
 still theirs. The stations are listener-supported — please
 [donate to Radio Paradise](https://radioparadise.com/donate),
 [donate to Chilltrax](https://www.chilltrax.com),
@@ -30,14 +30,14 @@ still theirs. The stations are listener-supported — please
 
 ## Install
 
-Download **Bed.app.zip** from the
+Download **Lo fi house.app.zip** from the
 [latest release](https://github.com/clodoan/bed/releases/latest).
 That is the app. Do not use **Source code (zip)** — that is just this repo.
 
-Unzip, drag `Bed.app` into `/Applications`, then **right-click → Open** the
+Unzip, drag `Lo fi house.app` into `/Applications`, then **right-click → Open** the
 first time (unsigned). Apple Silicon, macOS 14+.
 
-Look for the bed in the menu bar.
+Look for the house in the menu bar.
 
 ## Stations
 

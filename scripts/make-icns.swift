@@ -59,7 +59,7 @@ let rasterize = { (pixels: Int) -> Data in
 }
 
 let iconset = FileManager.default.temporaryDirectory
-    .appendingPathComponent("Bed-\(UUID().uuidString).iconset")
+    .appendingPathComponent("LofiHouse-\(UUID().uuidString).iconset")
 try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
 defer { try? FileManager.default.removeItem(at: iconset) }
 
