@@ -145,6 +145,7 @@ final class BedModel: ObservableObject {
 struct ContentView: View {
     @ObservedObject var model: BedModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("lcdFace") private var face: Face = .dancer
     @State private var snowUntil: Date?
 
     var body: some View {
@@ -160,6 +161,9 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .onChange(of: model.station.name) { _, _ in
             flashSnow(reduceMotion ? 0 : 0.2)
+        }
+        .onChange(of: face) { _, _ in
+            flashSnow(reduceMotion ? 0 : 0.12)
         }
     }
 
@@ -198,7 +202,7 @@ struct ContentView: View {
         return LCDPanel(
             lit: model.player.isPlaying,
             snow: snow,
-            backdrop: "night-desk"
+            scene: lcdScene
         ) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -209,14 +213,14 @@ struct ContentView: View {
                         .font(PixelFont.ui(7))
                         .foregroundStyle(BedPalette.creamDim)
                     Spacer()
+                    FaceToggle(face: $face)
                     Text(lcdClock)
                         .font(PixelFont.ui(7))
                         .foregroundStyle(BedPalette.lamp.opacity(0.85))
                 }
 
-                Spacer(minLength: 0)
-                    .frame(minHeight: 148)
-                    .accessibilityHidden(true)
+                faceStage
+                    .padding(.top, 6)
 
                 stationReadout
                     .padding(.top, 8)
@@ -254,6 +258,24 @@ struct ContentView: View {
             .buttonStyle(TactileButtonStyle(kind: .skip))
             .accessibilityLabel("Next station")
         }
+    }
+
+    private var lcdScene: LCDScene {
+        switch face {
+        case .desk:
+            return .desk(playing: model.player.isPlaying, reduceMotion: reduceMotion)
+        case .dancer:
+            return .dancer(playing: model.player.isPlaying, reduceMotion: reduceMotion)
+        }
+    }
+
+    private var faceStage: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, minHeight: 148)
+            .accessibilityLabel(face == .dancer
+                ? (model.player.isPlaying ? "Character dancing" : "Character idle")
+                : "")
+            .accessibilityHidden(face != .dancer)
     }
 
     private var stationReadout: some View {

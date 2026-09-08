@@ -46,10 +46,13 @@ enum PixelAsset {
         let candidates = [
             Bundle.main.resourceURL?.appendingPathComponent(file),
             Bundle.main.resourceURL?.appendingPathComponent("dancer/\(file)"),
+            Bundle.main.resourceURL?.appendingPathComponent("desk/\(file)"),
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
                 .appendingPathComponent("Resources/\(file)"),
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
                 .appendingPathComponent("Resources/dancer/\(file)"),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Resources/desk/\(file)"),
         ]
         return candidates.compactMap { $0 }.first {
             FileManager.default.fileExists(atPath: $0.path)
@@ -61,10 +64,15 @@ enum PixelAsset {
     }
 }
 
+enum LCDScene {
+    case desk(playing: Bool, reduceMotion: Bool)
+    case dancer(playing: Bool, reduceMotion: Bool)
+}
+
 struct LCDPanel<Content: View>: View {
     var lit: Bool
     var snow: Double
-    var backdrop: String? = nil
+    var scene: LCDScene = .desk(playing: false, reduceMotion: false)
     @ViewBuilder var content: () -> Content
 
     private let lip: CGFloat = 7
@@ -89,11 +97,7 @@ struct LCDPanel<Content: View>: View {
 
     private var glass: some View {
         ZStack {
-            if let backdrop {
-                SceneBackdrop(name: backdrop, dim: lit ? 0.10 : 0.22)
-            } else {
-                Rectangle().fill(BedPalette.outline)
-            }
+            tube
             RetroScreen(lit: lit)
             if snow > 0 {
                 PixelSnow()
@@ -101,6 +105,16 @@ struct LCDPanel<Content: View>: View {
             }
         }
         .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private var tube: some View {
+        switch scene {
+        case .desk(let playing, let reduceMotion):
+            DeskTube(playing: playing, reduceMotion: reduceMotion, lit: lit)
+        case .dancer(let playing, let reduceMotion):
+            DancerTube(playing: playing, reduceMotion: reduceMotion, lit: lit)
+        }
     }
 
     private var bezel: some View {
@@ -207,38 +221,122 @@ private struct PixelSnow: View {
     }
 }
 
+enum Face: String {
+    case desk
+    case dancer
+}
+
+struct FaceToggle: View {
+    @Binding var face: Face
+
+    var body: some View {
+        HStack(spacing: 5) {
+            faceButton(.desk, title: "DESK")
+            Text("/")
+                .foregroundStyle(BedPalette.cream.opacity(0.18))
+            faceButton(.dancer, title: "GIRL")
+        }
+        .font(PixelFont.ui(6))
+        .fixedSize(horizontal: true, vertical: true)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Screen")
+    }
+
+    private func faceButton(_ value: Face, title: String) -> some View {
+        let selected = face == value
+        return Button(title) {
+            face = value
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(BedPalette.cream.opacity(selected ? 0.62 : 0.28))
+        .accessibilityLabel(accessName(value))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func accessName(_ value: Face) -> String {
+        switch value {
+        case .desk: return "Desk image"
+        case .dancer: return "Dancing girl"
+        }
+    }
+}
+
+private struct DeskTube: View {
+    var playing: Bool
+    var reduceMotion: Bool
+    var lit: Bool
+
+    private static let cycle: [String] = [
+        "desk-01", "desk-01", "desk-01",
+        "desk-02", "desk-02",
+        "desk-03", "desk-03",
+        "desk-01", "desk-01",
+        "desk-04",
+        "desk-05", "desk-05",
+        "desk-06",
+        "desk-01"
+    ]
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.4, paused: reduceMotion || !playing)) { context in
+            SceneBackdrop(name: frameName(at: context.date), dim: lit ? 0.10 : 0.22)
+        }
+    }
+
+    private func frameName(at date: Date) -> String {
+        if reduceMotion || !playing {
+            return "desk-01"
+        }
+        let frames = Self.cycle
+        let index = Int(date.timeIntervalSinceReferenceDate / 1.4) % frames.count
+        return frames[index]
+    }
+}
+
+private struct DancerTube: View {
+    var playing: Bool
+    var reduceMotion: Bool
+    var lit: Bool
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            SceneBackdrop(name: "toddler-room", wash: false, anchor: .leading)
+            DancerView(playing: playing, reduceMotion: reduceMotion)
+                .padding(.leading, 10)
+                .padding(.bottom, 84)
+            TubeWash(dim: lit ? 0.10 : 0.22)
+        }
+    }
+}
+
 /// Original pajama sprite. Proportions follow the Life Be pixel-art character tutorial
 /// (equal head and body height, 3/4 view, 1px outline):
 /// https://lifebe.com.au/artistic/pixel-art-tutorial-new-female-character-part-1/
 struct DancerView: View {
     var playing: Bool
-    var making: Bool
     var reduceMotion: Bool
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 5.0, paused: reduceMotion || (!playing && !making))) { context in
-            ZStack {
-                Ellipse()
-                    .fill(BedPalette.outline.opacity(0.35))
-                    .frame(width: 72, height: 10)
-                    .offset(y: 62)
-                PixelImage(frameName(at: context.date))
-                    .frame(height: 148)
-            }
-            .frame(maxWidth: .infinity, minHeight: 156)
+        TimelineView(.animation(minimumInterval: 1.0 / 5.0, paused: reduceMotion || !playing)) { context in
+            PixelImage(frameName(at: context.date), phosphor: true)
+                .frame(width: 86, height: 104)
         }
-        .accessibilityLabel(playing ? "Character dancing" : (making ? "Character waiting" : "Character idle"))
+        .accessibilityLabel(playing ? "Character dancing" : "Character idle")
     }
+
+    private static let danceCycle: [String] = {
+        let forward = (1...16).map { String(format: "dance-%02d", $0) }
+        let hold = ["dance-16", "dance-16"]
+        let back = (2...15).reversed().map { String(format: "dance-%02d", $0) }
+        return forward + hold + back
+    }()
 
     private func frameName(at date: Date) -> String {
         if reduceMotion {
-            return playing || making ? "dance-01" : "idle"
-        }
-        if making {
-            return Int(date.timeIntervalSinceReferenceDate * 2) % 2 == 0 ? "idle" : "dance-03"
+            return playing ? "dance-01" : "idle"
         }
         if playing {
-            let frames = (1...16).map { String(format: "dance-%02d", $0) }
+            let frames = Self.danceCycle
             let index = Int(date.timeIntervalSinceReferenceDate * 5) % frames.count
             return frames[index]
         }
@@ -248,17 +346,24 @@ struct DancerView: View {
 
 struct PixelImage: View {
     var name: String
+    var phosphor: Bool = false
 
-    init(_ name: String) {
+    init(_ name: String, phosphor: Bool = false) {
         self.name = name
+        self.phosphor = phosphor
     }
 
     var body: some View {
         if let image = PixelAsset.nsImage(name) {
-            Image(nsImage: image)
+            let sprite = Image(nsImage: image)
                 .resizable()
                 .interpolation(.none)
                 .scaledToFit()
+            if phosphor {
+                sprite.modifier(PhosphorTint())
+            } else {
+                sprite
+            }
         } else {
             Text("🛏️")
                 .font(.system(size: 44))
@@ -266,9 +371,44 @@ struct PixelImage: View {
     }
 }
 
+private struct PhosphorTint: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .saturation(0.78)
+            .contrast(0.86)
+            .colorMultiply(Color(red: 0.68, green: 0.54, blue: 0.40))
+            .mask { content }
+            .compositingGroup()
+    }
+}
+
+private struct TubeWash: View {
+    var dim: Double
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color.black.opacity(dim))
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0.28), location: 0),
+                    .init(color: .clear, location: 0.24),
+                    .init(color: .clear, location: 0.62),
+                    .init(color: .black.opacity(0.32), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 private struct SceneBackdrop: View {
     var name: String
-    var dim: Double
+    var dim: Double = 0
+    var wash: Bool = true
+    var anchor: Alignment = .trailing
 
     var body: some View {
         GeometryReader { geo in
@@ -276,28 +416,20 @@ private struct SceneBackdrop: View {
                 if let image = PixelAsset.nsImage(name) {
                     Image(nsImage: image)
                         .resizable()
+                        .interpolation(.none)
                         .scaledToFill()
                         .frame(
                             width: geo.size.width,
                             height: geo.size.height,
-                            alignment: .trailing
+                            alignment: anchor
                         )
                         .clipped()
                 } else {
                     Rectangle().fill(BedPalette.well)
                 }
-                Rectangle()
-                    .fill(Color.black.opacity(dim))
-                LinearGradient(
-                    stops: [
-                        .init(color: .black.opacity(0.28), location: 0),
-                        .init(color: .clear, location: 0.24),
-                        .init(color: .clear, location: 0.62),
-                        .init(color: .black.opacity(0.32), location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                if wash {
+                    TubeWash(dim: dim)
+                }
             }
         }
         .allowsHitTesting(false)
