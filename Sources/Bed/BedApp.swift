@@ -27,7 +27,14 @@ struct BedApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
         PixelFont.register()
+        if Snapshot.requested {
+            Task { @MainActor in
+                await Snapshot.write()
+                NSApp.terminate(nil)
+            }
+            return
+        }
+        NSApp.setActivationPolicy(.accessory)
     }
 }

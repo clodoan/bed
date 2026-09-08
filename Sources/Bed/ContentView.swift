@@ -139,7 +139,8 @@ final class BedModel: ObservableObject {
 
 struct ContentView: View {
     @ObservedObject var model: BedModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var reduceMotion: Bool? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotionEnv
     @AppStorage("lcdFace") private var face: Face = .dancer
     @State private var snowUntil: Date?
 
@@ -155,10 +156,10 @@ struct ContentView: View {
         .background(BedPalette.night)
         .preferredColorScheme(.dark)
         .onChange(of: model.station.name) { _, _ in
-            flashSnow(reduceMotion ? 0 : 0.2)
+            flashSnow(prefersReduceMotion ? 0 : 0.2)
         }
         .onChange(of: face) { _, _ in
-            flashSnow(reduceMotion ? 0 : 0.12)
+            flashSnow(prefersReduceMotion ? 0 : 0.12)
         }
     }
 
@@ -199,7 +200,7 @@ struct ContentView: View {
             snow: snow,
             face: face,
             playing: model.isPlaying,
-            reduceMotion: reduceMotion
+            reduceMotion: prefersReduceMotion
         ) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -268,7 +269,7 @@ struct ContentView: View {
             MarqueeText(
                 text: model.station.name.uppercased(),
                 running: model.isPlaying,
-                reduceMotion: reduceMotion
+                reduceMotion: prefersReduceMotion
             )
             .frame(height: 20, alignment: .leading)
             Text(model.station.vibe)
@@ -279,6 +280,10 @@ struct ContentView: View {
                 .frame(height: 16, alignment: .leading)
         }
         .frame(maxWidth: .infinity, minHeight: 36, alignment: .topLeading)
+    }
+
+    private var prefersReduceMotion: Bool {
+        reduceMotion ?? reduceMotionEnv
     }
 
     private var lcdPower: String {

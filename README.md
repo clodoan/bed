@@ -14,10 +14,14 @@
 </p>
 
 <p align="center">
-  <img src="Resources/night-desk.png" width="720" alt="Night bedroom, someone at a desk, computer glow">
+  <img src="Resources/readme/desk.png" width="340" alt="Desk face, Mellow Mix playing">
+  &nbsp;
+  <img src="Resources/readme/girl.png" width="340" alt="Girl face, Mellow Mix playing">
 </p>
 
-No account. No API key. Play starts on Mellow Mix. Skip cycles stations.
+No account. No API key. Click the house in the menu bar, press play.
+Skip cycles stations. The LCD swaps a night desk for a girl in the same room.
+
 Lo fi house is a tuner — it opens each station's published stream. The music is
 still theirs. The stations are listener-supported — please
 [donate to Radio Paradise](https://radioparadise.com/donate),
@@ -36,8 +40,6 @@ That is the app. Do not use **Source code (zip)** — that is just this repo.
 
 Unzip, drag `Lo fi house.app` into `/Applications`, then **right-click → Open** the
 first time (unsigned). Apple Silicon, macOS 14+.
-
-Look for the house in the menu bar.
 
 ## Stations
 
