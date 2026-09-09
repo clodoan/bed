@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app zip
+        run: ./scripts/package.sh "Lo fi house.app.zip"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          NOTES=$'**Download `Lo fi house.app.zip` below** — that is the app. Ignore Source code (zip); that is the repo.\n\nUnzip, drag `Lo fi house.app` into Applications, then **right-click → Open** the first time. Apple Silicon, macOS 14+.'
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "Lo fi house.app.zip" --clobber
+            gh release edit "$TAG" --title "Lo fi house ${VERSION}" --notes "$NOTES" --latest
+          else
+            gh release create "$TAG" \
+              --title "Lo fi house ${VERSION}" \
+              --notes "$NOTES" \
+              --generate-notes \
+              --latest \
+              "Lo fi house.app.zip"
+          fi
