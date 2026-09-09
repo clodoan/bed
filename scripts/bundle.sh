@@ -35,10 +35,14 @@ chmod +x "$APP/Contents/MacOS/LofiHouse"
 
 # Old product name — a leftover Bed.app would keep launching as Bed.
 rm -rf Bed.app
-if [[ -d /Applications/Bed.app ]]; then
-  rm -rf /Applications/Bed.app
-fi
-ditto "$APP" "/Applications/$APP"
 
-echo "Built $APP"
-echo "open \"/Applications/$APP\""
+if [[ -z "${CI:-}" ]]; then
+  if [[ -d /Applications/Bed.app ]]; then
+    rm -rf /Applications/Bed.app
+  fi
+  ditto "$APP" "/Applications/$APP"
+  echo "Built $APP"
+  echo "open \"/Applications/$APP\""
+else
+  echo "Built $APP"
+fi
