@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,8 +14,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Require a version tag
+        run: |
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9] ]]; then
+            echo "Refusing to publish from ${GITHUB_REF_NAME}. Push a v* tag." >&2
+            exit 1
+          fi
+
       - name: Build app zip
-        run: ./scripts/package.sh "Lo fi house.app.zip"
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/package.sh LofiHouse.zip
+
+      - name: Check the zip is a signed app
+        run: |
+          set -euo pipefail
+          TMP="$(mktemp -d)"
+          ditto -x -k LofiHouse.zip "$TMP"
+          APP="$TMP/Lo fi house.app"
+          test -x "$APP/Contents/MacOS/LofiHouse"
+          codesign --verify --verbose=2 "$APP"
+          unzip -l LofiHouse.zip | grep -q "Lo fi house.app/Contents/_CodeSignature/CodeResources"
 
       - name: Publish GitHub Release
         env:
@@ -25,9 +43,9 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          NOTES=$'**Download `Lo fi house.app.zip` below** — that is the app. Ignore Source code (zip); that is the repo.\n\nUnzip, drag `Lo fi house.app` into Applications, then **right-click → Open** the first time. Apple Silicon, macOS 14+.'
+          NOTES=$'**Download `LofiHouse.zip` below** — that is the app. Ignore Source code (zip); that is the repo.\n\nmacOS 14+, Apple Silicon. One-liner:\n\n```\ncurl -fsSL https://raw.githubusercontent.com/clodoan/bed/main/scripts/install.sh | bash\n```\n\nOr unzip, drag `Lo fi house.app` into Applications, then:\n\n```\nxattr -cr "/Applications/Lo fi house.app" && open "/Applications/Lo fi house.app"\n```'
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "Lo fi house.app.zip" --clobber
+            gh release upload "$TAG" LofiHouse.zip --clobber
             gh release edit "$TAG" --title "Lo fi house ${VERSION}" --notes "$NOTES" --latest
           else
             gh release create "$TAG" \
@@ -35,5 +53,5 @@ jobs:
               --notes "$NOTES" \
               --generate-notes \
               --latest \
-              "Lo fi house.app.zip"
+              LofiHouse.zip
           fi

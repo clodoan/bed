@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/clodoan/bed/releases/latest"><strong>Download Lo fi house.app.zip</strong></a>
+  <a href="https://github.com/clodoan/bed/releases/latest/download/LofiHouse.zip"><strong>Download LofiHouse.zip</strong></a>
 </p>
 
 <p align="center">
@@ -34,12 +34,26 @@ still theirs. The stations are listener-supported — please
 
 ## Install
 
-Download **Lo fi house.app.zip** from the
-[latest release](https://github.com/clodoan/bed/releases/latest).
-That is the app. Do not use **Source code (zip)** — that is just this repo.
+Apple Silicon, macOS 14+.
 
-Unzip, drag `Lo fi house.app` into `/Applications`, then **right-click → Open** the
-first time (unsigned). Apple Silicon, macOS 14+.
+```sh
+curl -fsSL https://raw.githubusercontent.com/clodoan/bed/main/scripts/install.sh | bash
+```
+
+That downloads **LofiHouse.zip** from the
+[latest release](https://github.com/clodoan/bed/releases/latest), puts
+`Lo fi house.app` in `/Applications`, and clears the quarantine flag macOS
+adds to GitHub downloads (the one that says the file cannot be installed).
+
+Or [download LofiHouse.zip](https://github.com/clodoan/bed/releases/latest/download/LofiHouse.zip)
+yourself. Unzip, drag `Lo fi house.app` into `/Applications`, then:
+
+```sh
+xattr -cr "/Applications/Lo fi house.app"
+open "/Applications/Lo fi house.app"
+```
+
+Do not use **Source code (zip)** — that is this repo, not the app.
 
 ## Stations
 
