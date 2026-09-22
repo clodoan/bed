@@ -33,6 +33,13 @@ cp Resources/PressStart2P-Regular.ttf "$APP/Contents/Resources/"
 cp Resources/PressStart2P-OFL.txt "$APP/Contents/Resources/"
 chmod +x "$APP/Contents/MacOS/LofiHouse"
 
+# Swift leaves a linker-signed binary. Gatekeeper treats a bundle whose
+# signature does not seal Resources as damaged ("cannot be installed").
+codesign --force --sign - --timestamp=none \
+  --identifier com.clodoan.lofihouse \
+  "$APP"
+codesign --verify --verbose=2 "$APP"
+
 # Old product name — a leftover Bed.app would keep launching as Bed.
 rm -rf Bed.app
 
