@@ -10,8 +10,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/clodoan/bed/releases/latest/download/LofiHouse.zip"><strong>Download LofiHouse.zip</strong></a>
+  Apple Silicon, macOS 14+.
 </p>
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/clodoan/bed/main/scripts/install.sh | bash
+```
 
 <p align="center">
   <img src="Resources/readme/desk.png" width="340" alt="Desk face, Mellow Mix playing">
@@ -34,13 +38,7 @@ still theirs. The stations are listener-supported — please
 
 ## Install
 
-Apple Silicon, macOS 14+.
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/clodoan/bed/main/scripts/install.sh | bash
-```
-
-That is the path that works. It downloads **LofiHouse.zip** from the
+That one-liner is the path that works. It downloads **LofiHouse.zip** from the
 [latest release](https://github.com/clodoan/bed/releases/latest), copies
 `Lo fi house.app` into `/Applications`, and clears the quarantine flag macOS
 puts on GitHub downloads — the one that says the file cannot be installed.
