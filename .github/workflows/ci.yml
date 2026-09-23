@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  package:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app zip
+        run: |
+          chmod +x scripts/*.sh scripts/Install.command
+          ./scripts/package.sh LofiHouse.zip
+
+      - name: Check the zip is a signed app with an installer
+        run: |
+          set -euo pipefail
+          TMP="$(mktemp -d)"
+          ditto -x -k LofiHouse.zip "$TMP"
+          APP="$TMP/Install Lo fi house/Lo fi house.app"
+          test -x "$TMP/Install Lo fi house/Install.command"
+          test -f "$TMP/Install Lo fi house/Read Me.txt"
+          test -x "$APP/Contents/MacOS/LofiHouse"
+          codesign --verify --verbose=2 "$APP"
+          unzip -l LofiHouse.zip | grep -q "Lo fi house.app/Contents/_CodeSignature/CodeResources"

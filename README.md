@@ -40,20 +40,17 @@ Apple Silicon, macOS 14+.
 curl -fsSL https://raw.githubusercontent.com/clodoan/bed/main/scripts/install.sh | bash
 ```
 
-That downloads **LofiHouse.zip** from the
-[latest release](https://github.com/clodoan/bed/releases/latest), puts
-`Lo fi house.app` in `/Applications`, and clears the quarantine flag macOS
-adds to GitHub downloads (the one that says the file cannot be installed).
+That is the path that works. It downloads **LofiHouse.zip** from the
+[latest release](https://github.com/clodoan/bed/releases/latest), copies
+`Lo fi house.app` into `/Applications`, and clears the quarantine flag macOS
+puts on GitHub downloads — the one that says the file cannot be installed.
 
 Or [download LofiHouse.zip](https://github.com/clodoan/bed/releases/latest/download/LofiHouse.zip)
-yourself. Unzip, drag `Lo fi house.app` into `/Applications`, then:
+yourself. Unzip, open **Install Lo fi house**, double-click **Install.command**.
+Do not open the house icon from that folder.
 
-```sh
-xattr -cr "/Applications/Lo fi house.app"
-open "/Applications/Lo fi house.app"
-```
-
-Do not use **Source code (zip)** — that is this repo, not the app.
+Do not use **Source code (zip)** — that is this repo, not the app. Do not use
+the green **Code → Download ZIP** button either.
 
 ## Stations
 
@@ -70,6 +67,14 @@ Do not use **Source code (zip)** — that is this repo, not the app.
 - Nightride — synthwave (Nightride FM)
 
 ## Build from source
+
+Xcode 16+ / Swift 6, Apple Silicon.
+
+```sh
+./scripts/bundle.sh
+```
+
+Puts `Lo fi house.app` in `/Applications`. To cut a GitHub zip:
 
 ```sh
 ./scripts/package.sh

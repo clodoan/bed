@@ -37,6 +37,9 @@ chmod +x "$APP/Contents/MacOS/LofiHouse"
 # signature does not seal Resources as damaged ("cannot be installed").
 codesign --force --sign - --timestamp=none \
   --identifier com.clodoan.lofihouse \
+  "$APP/Contents/MacOS/LofiHouse"
+codesign --force --sign - --timestamp=none \
+  --identifier com.clodoan.lofihouse \
   "$APP"
 codesign --verify --verbose=2 "$APP"
 

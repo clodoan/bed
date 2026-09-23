@@ -26,7 +26,7 @@ if ! curl -fL --retry 3 --retry-delay 1 -o "$TMP/LofiHouse.zip" "$ZIP_URL"; then
 fi
 
 ditto -x -k "$TMP/LofiHouse.zip" "$TMP"
-APP="$(find "$TMP" -name "*.app" -maxdepth 2 | head -1)"
+APP="$(find "$TMP" -name "*.app" -maxdepth 3 -print -quit)"
 if [[ -z "$APP" || ! -d "$APP" ]]; then
   echo "The download was not the app. Use LofiHouse.zip from the latest release, not Source code." >&2
   exit 1

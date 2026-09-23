@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing v* tag to rebuild and publish"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -13,25 +19,32 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Require a version tag
         run: |
-          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9] ]]; then
-            echo "Refusing to publish from ${GITHUB_REF_NAME}. Push a v* tag." >&2
+          REF="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          if [[ ! "$REF" =~ ^v[0-9] ]]; then
+            echo "Refusing to publish from ${REF}. Push a v* tag." >&2
             exit 1
           fi
+          echo "TAG=$REF" >> "$GITHUB_ENV"
+          echo "VERSION=${REF#v}" >> "$GITHUB_ENV"
 
       - name: Build app zip
         run: |
-          chmod +x scripts/*.sh
+          chmod +x scripts/*.sh scripts/Install.command
           ./scripts/package.sh LofiHouse.zip
 
-      - name: Check the zip is a signed app
+      - name: Check the zip is a signed app with an installer
         run: |
           set -euo pipefail
           TMP="$(mktemp -d)"
           ditto -x -k LofiHouse.zip "$TMP"
-          APP="$TMP/Lo fi house.app"
+          APP="$TMP/Install Lo fi house/Lo fi house.app"
+          test -x "$TMP/Install Lo fi house/Install.command"
+          test -f "$TMP/Install Lo fi house/Read Me.txt"
           test -x "$APP/Contents/MacOS/LofiHouse"
           codesign --verify --verbose=2 "$APP"
           unzip -l LofiHouse.zip | grep -q "Lo fi house.app/Contents/_CodeSignature/CodeResources"
@@ -41,9 +54,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-          NOTES=$'**Download `LofiHouse.zip` below** — that is the app. Ignore Source code (zip); that is the repo.\n\nmacOS 14+, Apple Silicon. One-liner:\n\n```\ncurl -fsSL https://raw.githubusercontent.com/clodoan/bed/main/scripts/install.sh | bash\n```\n\nOr unzip, drag `Lo fi house.app` into Applications, then:\n\n```\nxattr -cr "/Applications/Lo fi house.app" && open "/Applications/Lo fi house.app"\n```'
+          NOTES=$'**Download `LofiHouse.zip` below** — that is the app. Ignore Source code (zip); that is the repo.\n\nmacOS 14+, Apple Silicon.\n\nOne-liner (clears Gatekeeper quarantine):\n\n```\ncurl -fsSL https://raw.githubusercontent.com/clodoan/bed/main/scripts/install.sh | bash\n```\n\nOr unzip, open **Install Lo fi house**, double-click **Install.command**. Do not open the house icon from that folder — macOS will say it cannot be installed.'
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" LofiHouse.zip --clobber
             gh release edit "$TAG" --title "Lo fi house ${VERSION}" --notes "$NOTES" --latest
